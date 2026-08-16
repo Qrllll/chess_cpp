@@ -29,6 +29,7 @@ struct Move // what a move contains
     int fromrow, fromcol, torow, tocol;
     Piece movedPiece;
     Piece capturedPiece = {PieceType::EMPTY, Color::NONE};
+    PieceType promotedTo = PieceType::EMPTY;
 
     bool isEnPassantCapture = false;   // captured pawn wasn't on the 'to' square
     bool isCastleKingside = false;
@@ -66,6 +67,21 @@ char pieceChar(const Piece& p) // return the specific character for each pieces 
         c = toupper(c);
 
     return c;
+}
+
+PieceType choosePromotionPiece()
+{
+    cout << "Pawn promotion! Choose a piece (Q/R/B/N): ";
+    char choice;
+    cin >> choice;
+    choice = toupper(choice);
+    switch (choice)
+    {
+    case 'R': return PieceType::ROOK;
+    case 'B': return PieceType::BISHOP;
+    case 'N': return PieceType::KNIGHT;
+    default:  return PieceType::QUEEN;
+    }
 }
 
 void setupStartPos()
@@ -206,7 +222,13 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     }
     
     movePieceRaw(fromrow, fromcol, torow, tocol);
-
+    
+    if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0)))
+    {
+        PieceType chosen = choosePromotionPiece();
+        board[torow][tocol].type = chosen;
+        m.promotedTo = chosen;
+    }
     
     if(moveCount < MAX_MOVES)
         moveHistory[moveCount++] = m;
@@ -372,6 +394,11 @@ bool isKingMove(int fromrow, int fromcol, int torow, int tocol)
 
     return true;
 }
+
+
+//function call for the isCastling()
+bool isSquareAttacked(int torow, int tocol, int turn);
+bool isKingCheck(int turn);
 
 bool isCastling(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn)
 {
@@ -613,7 +640,8 @@ bool isCheckmateStalemate(int turn)
                         {
                             Piece frompiece = board[r][c]; // read the piece on the square thats about to move
                             Piece destpiece = board[x][y]; // read the destination piece on the square
-                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY); // read the capture pawn if it was captured via en passant
+                            
+                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             Piece epCapturedPiece = board[r][y]; // read the pawn captured via en passant
                             if(isEnPassant)
                                 board[r][y] = Piece{}; // clear the pawn captured via en passant
@@ -653,6 +681,7 @@ bool isCheckmateStalemate(int turn)
                         {
                             Piece frompiece = board[r][c];
                             Piece destpiece = board[x][y];
+
                             bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             Piece epCapturedPiece = board[r][y];
                             if(isEnPassant)
@@ -738,6 +767,8 @@ int main(void)
             continue;
         }
 
+
+        int oldMoveCount = moveCount; // if a check still exist after moving for the current players turn, reinitiallize the movecount after applyMove()
         applyMove(fromrow, fromcol, torow, tocol);
 
         if(isKingCheck(turn)) // check if the king is still in check after the current player's move
@@ -748,6 +779,7 @@ int main(void)
                 board[torow][tocol] = destpiece; //undo move as king is still in check
                 board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
                 printBoard();
+                moveCount = oldMoveCount;
                 cout << "The White king is in check.\n";
                 continue;
             }
@@ -757,6 +789,7 @@ int main(void)
                 board[torow][tocol] = destpiece;
                 board[fromrow][tocol] = epCapturedPiece;
                 printBoard();
+                moveCount = oldMoveCount;
                 cout << "The Black king is in check.\n";
                 continue;
             }
