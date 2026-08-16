@@ -164,7 +164,7 @@ void movePieceRaw(int fromrow, int fromcol, int torow, int tocol)
     board[fromrow][fromcol] = Piece{};
 }
 
-void applyMove(int fromrow, int fromcol, int torow, int tocol)
+void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main function to move the pieces, and store the move history on each turn
 {
     Piece frompiece = board[fromrow][fromcol];
     Piece destpiece = board[torow][tocol];
@@ -355,7 +355,7 @@ bool isKingMove(int fromrow, int fromcol, int torow, int tocol)
     return true;
 }
 
-bool isLegalMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol)
+bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol)
 {
     if (fromrow == torow && fromcol == tocol) //moving to the same place
         return false;
@@ -435,7 +435,7 @@ bool isKingCheck(int turn)
         {
             for (int c = 0; c < 8; c++)
             {
-                if (isLegalMove(board[r][c], r, c, kingrow, kingcol)) //check if any pieces can capture the king
+                if (isLegalPieceMove(board[r][c], r, c, kingrow, kingcol)) //check if any pieces can capture the king
                     return true;
             }
         }
@@ -459,7 +459,7 @@ bool isKingCheck(int turn)
         {
             for (int c = 0; c < 8; c++)
             {
-                if (isLegalMove(board[r][c], r, c, kingrow, kingcol))
+                if (isLegalPieceMove(board[r][c], r, c, kingrow, kingcol))
                     return true;
             }
         }
@@ -482,22 +482,29 @@ bool isCheckmateStalemate(int turn)
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        if (isLegalMove(board[r][c], r, c, x, y) && board[r][c].color == Color::WHITE) //checks all the possible moves for the player's turn to escape check
+                        if (isLegalPieceMove(board[r][c], r, c, x, y) && board[r][c].color == Color::WHITE) //checks all the possible moves for the player's turn to escape check
                         {
                             Piece frompiece = board[r][c]; // read the piece on the square thats about to move
                             Piece destpiece = board[x][y]; // read the destination piece on the square
+                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY); // read the capture pawn if it was captured via en passant
+                            Piece epCapturedPiece = board[r][y]; // read the pawn captured via en passant
+                            if(isEnPassant)
+                                board[r][y] = Piece{}; // clear the pawn captured via en passant
+
                             movePieceRaw(r, c, x, y);
 
                             if(!isKingCheck(turn)) //succeed in escaping check
                             {
                                 board[r][c] = frompiece; //undo moves
                                 board[x][y] = destpiece;
+                                board[r][y] = epCapturedPiece; //return back the pawn 
                                 return false;
                             }
                             else
                             {
                                 board[r][c] = frompiece;
                                 board[x][y] = destpiece;
+                                board[r][y] = epCapturedPiece;
                             }
                         }
                     }
@@ -515,22 +522,29 @@ bool isCheckmateStalemate(int turn)
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        if (isLegalMove(board[r][c], r, c, x, y) && board[r][c].color == Color::BLACK)
+                        if (isLegalPieceMove(board[r][c], r, c, x, y) && board[r][c].color == Color::BLACK)
                         {
-                            Piece frompiece = board[r][c]; // read the piece on the square thats about to move
-                            Piece destpiece = board[x][y]; // read the destination piece on the square
+                            Piece frompiece = board[r][c];
+                            Piece destpiece = board[x][y];
+                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
+                            Piece epCapturedPiece = board[r][y];
+                            if(isEnPassant)
+                                board[r][y] = Piece{};
+
                             movePieceRaw(r, c, x, y);
 
                             if(!isKingCheck(turn))
                             {
                                 board[r][c] = frompiece;
                                 board[x][y] = destpiece;
+                                board[r][y] = epCapturedPiece;
                                 return false;
                             }
                             else
                             {
                                 board[r][c] = frompiece;
                                 board[x][y] = destpiece;
+                                board[r][y] = epCapturedPiece;
                             }
                         }
                     }
@@ -578,14 +592,15 @@ int main(void)
 
         Piece frompiece = board[fromrow][fromcol]; // read the piece on the square thats about to move
         Piece destpiece = board[torow][tocol]; // read the destination piece on the square
-
+        Piece epCapturedPiece = board[fromrow][tocol]; // read the captured piece if it was en passant
+        
         if (frompiece.type == PieceType::EMPTY)
         {
             cout << "There is no piece on that square.\n";
             continue;
         }
 
-        if (!isLegalMove(frompiece, fromrow, fromcol, torow, tocol))
+        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol))
         {
             cout << "That is not a legal move.\n";
             continue;
@@ -598,12 +613,13 @@ int main(void)
 
         applyMove(fromrow, fromcol, torow, tocol);
 
-        if(isKingCheck(turn)) // check if the king is still in check after a move
+        if(isKingCheck(turn)) // check if the king is still in check after the current player's move
         {
             if(turn % 2 == 0)
             {
                 board[fromrow][fromcol] = frompiece;
-                board[torow][tocol] = destpiece; //undo moves as king is still in check
+                board[torow][tocol] = destpiece; //undo move as king is still in check
+                board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
                 printBoard();
                 cout << "The White king is in check.\n";
                 continue;
@@ -612,6 +628,7 @@ int main(void)
             {
                 board[fromrow][fromcol] = frompiece;
                 board[torow][tocol] = destpiece;
+                board[fromrow][tocol] = epCapturedPiece;
                 printBoard();
                 cout << "The Black king is in check.\n";
                 continue;
