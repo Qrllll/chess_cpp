@@ -182,12 +182,27 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     if(frompiece.type == PieceType::PAWN && abs(torow - fromrow) == 2) //check if the current pawn had moved 2 steps, if so, it can be en passant'ed
         m.isPawnDoubleStep = true;
 
-    if(frompiece.type == PieceType::PAWN && fromcol != tocol && destpiece.type == PieceType::EMPTY)
+    if(frompiece.type == PieceType::PAWN && fromcol != tocol && destpiece.type == PieceType::EMPTY) // en passant move
     {
         m.isEnPassantCapture = true;
         Piece& capturedPawn = board[fromrow][tocol]; //captured pawn is at the same row of the "from" row, and same column of the destination column
         m.capturedPiece = {capturedPawn.type, capturedPawn.color};
         capturedPawn = Piece{}; // remove the captured pawn from the board
+    }
+
+    if(frompiece.type == PieceType::KING && fromrow == torow && abs(fromcol - tocol) == 2)
+    {
+        if(tocol > fromcol) //kingside
+        {
+            m.isCastleKingside = true;
+            movePieceRaw(fromrow, 7, torow, 5); //moves the rook
+        }
+        else
+        {
+            m.isCastleQueenside = true;
+            movePieceRaw(fromrow, 0, torow, 3);
+        }
+
     }
     
     movePieceRaw(fromrow, fromcol, torow, tocol);
@@ -358,7 +373,51 @@ bool isKingMove(int fromrow, int fromcol, int torow, int tocol)
     return true;
 }
 
-bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol)
+bool isCastling(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn)
+{
+    if (piece.type != PieceType::KING) // only the king can castle
+        return false;
+    if (fromrow != torow || abs(tocol - fromcol) != 2) // King must move exactly two squares horizontally
+        return false;
+    if (piece.hasMoved) // King must not have moved before
+        return false;
+    if (isKingCheck(turn))
+        return false;
+
+    bool kingside = (tocol > fromcol); //true = kingside, false = queenside
+    
+    int rookcol;
+    if(kingside)
+        rookcol = 7;
+    else
+        rookcol = 0;
+
+    if (board[fromrow][rookcol].type != PieceType::ROOK) //must be rook
+        return false;
+    if (board[fromrow][rookcol].color != piece.color) //must be same color as king
+        return false;
+    if (board[fromrow][rookcol].hasMoved) //must not have moved
+        return false;
+
+    if(kingside)
+    {
+        if(board[fromrow][5].type != PieceType::EMPTY || board[fromrow][6].type != PieceType::EMPTY) //the 2 squares must be empty
+            return false;
+        if(isSquareAttacked(fromrow, 5, turn) || isSquareAttacked(fromrow, 6, turn)) // king dosent moves through squares that can be attacked
+            return false;
+    }
+    else
+    {
+        if(board[fromrow][1].type != PieceType::EMPTY || board[fromrow][2].type != PieceType::EMPTY || board[fromrow][3].type != PieceType::EMPTY) //the 3 squares must be empty
+            return false;
+        if(isSquareAttacked(fromrow, 2, turn) || isSquareAttacked(fromrow, 3, turn)) // king dosent moves through squares that can be attacked
+            return false;
+    }
+    
+    return true;
+}
+
+bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn)
 {
     if (fromrow == torow && fromcol == tocol) //moving to the same place
         return false;
@@ -366,6 +425,11 @@ bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, i
     const Piece& dest = board[torow][tocol];
     if (dest.color == piece.color) // capturing same color piece
         return false;
+
+    if(piece.type == PieceType::KING && abs(tocol - fromcol) == 2) //castling
+    {
+        return isCastling(piece, fromrow, fromcol, torow, tocol,turn);
+    }
 
     switch (piece.type)
     {
@@ -389,28 +453,70 @@ bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, i
 
 bool isSquareAttacked(int torow, int tocol,int turn)
 {
-    int validcolor = turn % 2;
+    Color attackerColor;
 
-    if(validcolor ==  0) // the if the square if attacted fur the current player's turn
-    {
-        for (int r = 0; r < 8; r++)
-        {
-            for (int c = 0; c < 8; c++)
-            {
-                if (isLegalPieceMove(board[r][c], r, c, torow, tocol) && board[r][c].color == Color::BLACK)
-                    return true;
-            } 
-        }
-    }
+    if (turn % 2 == 0)
+        attackerColor = Color::BLACK;
     else
+        attackerColor = Color::WHITE;
+
+    for (int r = 0; r < 8; r++)
     {
-        for (int r = 0; r < 8; r++)
+        for (int c = 0; c < 8; c++)
         {
-            for (int c = 0; c < 8; c++)
+            if (board[r][c].color != attackerColor)
+                continue;
+
+            PieceType type = board[r][c].type;
+
+            switch (type)
             {
-                if (isLegalPieceMove(board[r][c], r, c, torow, tocol) && board[r][c].color == Color::WHITE)
+            case PieceType::PAWN: //cant use isPawnMove() as it dosent detect attacking empty squares
+            {
+                int direction;
+
+                if (attackerColor == Color::WHITE)
+                    direction = 1;
+                else
+                    direction = -1;
+
+                int dr = torow - r;
+                int dc = tocol - c;
+
+                if (dr == direction && abs(dc) == 1)
                     return true;
-            } 
+
+                break;
+            }
+
+            case PieceType::KNIGHT:
+                if (isKnightMove(r, c, torow, tocol))
+                    return true;
+                break;
+
+            case PieceType::BISHOP:
+                if (isBishopMove(r, c, torow, tocol))
+                    return true;
+                break;
+
+            case PieceType::ROOK:
+                if (isRookMove(r, c, torow, tocol))
+                    return true;
+                break;
+
+            case PieceType::QUEEN:
+                if (isQueenMove(r, c, torow, tocol))
+                    return true;
+                break;
+
+            case PieceType::KING:
+                if (isKingMove(r, c, torow, tocol))
+                    return true;
+                break;
+
+            default:
+                break;
+            }
         }
     }
 
@@ -464,7 +570,7 @@ bool isKingCheck(int turn)
             }
         }
 
-        if(isSquareAttacked(kingrow, kingcol, turn))
+        if(isSquareAttacked(kingrow, kingcol, turn)) // check if any pieces could attack the king
             return true;
     }
     else
@@ -503,7 +609,7 @@ bool isCheckmateStalemate(int turn)
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        if (isLegalPieceMove(board[r][c], r, c, x, y) && board[r][c].color == Color::WHITE) //checks all the possible moves for the player's turn to escape check
+                        if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::WHITE) //checks all the possible moves for the player's turn to escape check
                         {
                             Piece frompiece = board[r][c]; // read the piece on the square thats about to move
                             Piece destpiece = board[x][y]; // read the destination piece on the square
@@ -543,7 +649,7 @@ bool isCheckmateStalemate(int turn)
                 {
                     for (int y = 0; y < 8; y++)
                     {
-                        if (isLegalPieceMove(board[r][c], r, c, x, y) && board[r][c].color == Color::BLACK)
+                        if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::BLACK)
                         {
                             Piece frompiece = board[r][c];
                             Piece destpiece = board[x][y];
@@ -621,7 +727,7 @@ int main(void)
             continue;
         }
 
-        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol))
+        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
         {
             cout << "That is not a legal move.\n";
             continue;
