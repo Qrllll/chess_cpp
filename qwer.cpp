@@ -18,9 +18,10 @@ enum class Color { NONE, WHITE, BLACK }; //pieces color
 
 struct Piece // what a piece is made up of
 {
-    //default state
+    //default states
     PieceType type = PieceType::EMPTY;
     Color color = Color::NONE;
+    bool hasMoved = false;
 };
 
 struct Move // what a move contains
@@ -161,6 +162,7 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 void movePieceRaw(int fromrow, int fromcol, int torow, int tocol)
 {
     board[torow][tocol] = board[fromrow][fromcol];
+    board[torow][tocol].hasMoved = true;
     board[fromrow][fromcol] = Piece{};
 }
 
@@ -177,7 +179,7 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     m.movedPiece = {frompiece.type, frompiece.color};
     m.capturedPiece = {destpiece.type, destpiece.color};
 
-    if(frompiece.type == PieceType::PAWN && abs(torow - fromrow) == 2)
+    if(frompiece.type == PieceType::PAWN && abs(torow - fromrow) == 2) //check if the current pawn had moved 2 steps, if so, it can be en passant'ed
         m.isPawnDoubleStep = true;
 
     if(frompiece.type == PieceType::PAWN && fromcol != tocol && destpiece.type == PieceType::EMPTY)
@@ -189,6 +191,7 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     }
     
     movePieceRaw(fromrow, fromcol, torow, tocol);
+
     
     if(moveCount < MAX_MOVES)
         moveHistory[moveCount++] = m;
@@ -384,6 +387,36 @@ bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, i
     }
 }
 
+bool isSquareAttacked(int torow, int tocol,int turn)
+{
+    int validcolor = turn % 2;
+
+    if(validcolor ==  0) // the if the square if attacted fur the current player's turn
+    {
+        for (int r = 0; r < 8; r++)
+        {
+            for (int c = 0; c < 8; c++)
+            {
+                if (isLegalPieceMove(board[r][c], r, c, torow, tocol) && board[r][c].color == Color::BLACK)
+                    return true;
+            } 
+        }
+    }
+    else
+    {
+        for (int r = 0; r < 8; r++)
+        {
+            for (int c = 0; c < 8; c++)
+            {
+                if (isLegalPieceMove(board[r][c], r, c, torow, tocol) && board[r][c].color == Color::WHITE)
+                    return true;
+            } 
+        }
+    }
+
+    return false;
+}
+
 bool isColorMove(const Piece& piece, int& turn)
 {
     int validcolor = turn % 2; // 0 = white's turn, 1 = black's turn
@@ -431,14 +464,8 @@ bool isKingCheck(int turn)
             }
         }
 
-        for (int r = 0; r < 8; r++)
-        {
-            for (int c = 0; c < 8; c++)
-            {
-                if (isLegalPieceMove(board[r][c], r, c, kingrow, kingcol)) //check if any pieces can capture the king
-                    return true;
-            }
-        }
+        if(isSquareAttacked(kingrow, kingcol, turn))
+            return true;
     }
     else
     {
@@ -455,14 +482,8 @@ bool isKingCheck(int turn)
             }
         }
 
-        for (int r = 0; r < 8; r++)
-        {
-            for (int c = 0; c < 8; c++)
-            {
-                if (isLegalPieceMove(board[r][c], r, c, kingrow, kingcol))
-                    return true;
-            }
-        }
+        if(isSquareAttacked(kingrow, kingcol, turn))
+            return true;
     }
 
     return false;
