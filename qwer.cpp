@@ -404,11 +404,11 @@ bool isCastling(const Piece& piece, int fromrow, int fromcol, int torow, int toc
 {
     if (piece.type != PieceType::KING) // only the king can castle
         return false;
-    if (fromrow != torow || abs(tocol - fromcol) != 2) // King must move exactly two squares horizontally
+    if (fromrow != torow || abs(tocol - fromcol) != 2) // king must move exactly two squares horizontally
         return false;
-    if (piece.hasMoved) // King must not have moved before
+    if (piece.hasMoved) // king must not have moved before
         return false;
-    if (isKingCheck(turn))
+    if (isKingCheck(turn)) // king must not be in checked
         return false;
 
     bool kingside = (tocol > fromcol); //true = kingside, false = queenside
@@ -435,9 +435,9 @@ bool isCastling(const Piece& piece, int fromrow, int fromcol, int torow, int toc
     }
     else
     {
-        if(board[fromrow][1].type != PieceType::EMPTY || board[fromrow][2].type != PieceType::EMPTY || board[fromrow][3].type != PieceType::EMPTY) //the 3 squares must be empty
+        if(board[fromrow][1].type != PieceType::EMPTY || board[fromrow][2].type != PieceType::EMPTY || board[fromrow][3].type != PieceType::EMPTY)
             return false;
-        if(isSquareAttacked(fromrow, 2, turn) || isSquareAttacked(fromrow, 3, turn)) // king dosent moves through squares that can be attacked
+        if(isSquareAttacked(fromrow, 2, turn) || isSquareAttacked(fromrow, 3, turn))
             return false;
     }
     
@@ -640,19 +640,20 @@ bool isCheckmateStalemate(int turn)
                         {
                             Piece frompiece = board[r][c]; // read the piece on the square thats about to move
                             Piece destpiece = board[x][y]; // read the destination piece on the square
-                            
-                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             Piece epCapturedPiece = board[r][y]; // read the pawn captured via en passant
+                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             if(isEnPassant)
                                 board[r][y] = Piece{}; // clear the pawn captured via en passant
 
-                            movePieceRaw(r, c, x, y);
+                            //basically movePieceRaw but without the hasMoved = true since its only simulation
+                            board[x][y] = frompiece;
+                            board[r][c] = Piece{};
 
                             if(!isKingCheck(turn)) //succeed in escaping check
                             {
                                 board[r][c] = frompiece; //undo moves
                                 board[x][y] = destpiece;
-                                board[r][y] = epCapturedPiece; //return back the pawn 
+                                board[r][y] = epCapturedPiece; //return back the en passant'ed pawn 
                                 return false;
                             }
                             else
@@ -681,13 +682,13 @@ bool isCheckmateStalemate(int turn)
                         {
                             Piece frompiece = board[r][c];
                             Piece destpiece = board[x][y];
-
-                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             Piece epCapturedPiece = board[r][y];
+                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
                             if(isEnPassant)
                                 board[r][y] = Piece{};
 
-                            movePieceRaw(r, c, x, y);
+                            board[x][y] = frompiece;
+                            board[r][c] = Piece{};
 
                             if(!isKingCheck(turn))
                             {
@@ -737,8 +738,6 @@ int main(void)
 
     while (true)
     {
-        isKingCheck(turn);
-
         int fromrow, fromcol, torow, tocol;
         if (!readMove(fromrow, fromcol, torow, tocol))
         {
