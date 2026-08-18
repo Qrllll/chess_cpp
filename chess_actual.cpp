@@ -255,62 +255,8 @@ PieceType charToPromo(char c)
     }
 }
 
-
-//function declaration for the tryMakeMove()
-void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion);
-bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn);
-bool isColorMove(const Piece& piece, int& turn);
-bool isKingCheck(int turn);
-
-bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY)
-{
-    Piece frompiece = board[fromrow][fromcol];
-    Piece destpiece = board[torow][tocol];
-    Piece epCapturedPiece = board[fromrow][tocol];
- 
-    if (frompiece.type == PieceType::EMPTY)
-        {
-            cout << "There is no piece on that square.\n";
-            return false;
-        }
-
-        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
-        {
-            cout << "That is not a legal move.\n";
-            return false;
-        }
-
-        if (!isColorMove(frompiece, turn))
-        {
-            return false;
-        }
- 
-    int oldMoveCount = moveCount;
-    applyMove(fromrow, fromcol, torow, tocol, forcedPromotion);
- 
-    if(isKingCheck(turn)) // check if the king is still in check after the current player's move
-        {
-            board[fromrow][fromcol] = frompiece;
-            board[torow][tocol] = destpiece; //undo move as king is still in check
-            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
-            printBoard();
-            moveCount = oldMoveCount;
-            if(turn % 2 == 0)
-            {
-                cout << "The White king is still in check.\n";
-                return false;
-            }
-            else
-            {
-                cout << "The Black king is still in check.\n";
-                return false;
-            }
-        }
- 
-    turn++;
-    return true;
-}
-
+//function declaraction for undoMove() and loadGame()
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY);
 void undoMove()
 {
     if (moveCount == 0) 
@@ -416,9 +362,12 @@ void loadGame(const string& filename)
 
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
-    cout << "Enter move (e.g. e2e4), 'history', 'undo', 'save <file>' or 'load <file>: ";
+    cout << "Enter move (e.g. e2e4), 'history', 'undo', 'save <file>', 'load <file>' or 'quit':";
     string input;
     cin >> input;
+
+    if (input == "quit" || input == "exit")
+        return false;
 
     if (input == "history")
     {
@@ -443,12 +392,11 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
         return readMove(fromrow, fromcol, torow, tocol);
     }
     
-    if (input.size() != 4)
-        return false;
-    if (!checkRange(input[0], input[1], fromrow, fromcol))
-        return false;
-    if (!checkRange(input[2], input[3], torow, tocol))
-        return false;
+    if(input.size() != 4 || !checkRange(input[0], input[1], fromrow, fromcol) || !checkRange(input[2], input[3], torow, tocol))
+    {
+        cout << "Invalid input. Type a move (e.g. e2e4), a command, or 'quit'.\n";
+        return readMove(fromrow, fromcol, torow, tocol);
+    }
 
     return true;
 }
@@ -876,7 +824,7 @@ bool isKingCheck(int turn)
                 {
                     kingrow = r;
                     kingcol = c;
-                }
+                } 
             }
         }
 
@@ -911,85 +859,67 @@ bool isCheckmateStalemate(int turn)
 
     if (validcolor == 0)
     {
-        for (int r = 0; r < 8; r++)
-        {
-            for (int c = 0; c < 8; c++)
+        for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) for (int x = 0; x < 8; x++) for (int y = 0; y < 8; y++)//checks all the possible moves for the player's turn to escape check
             {
-                for (int x = 0; x < 8; x++)
+                if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::WHITE) 
                 {
-                    for (int y = 0; y < 8; y++)
+                    Piece frompiece = board[r][c]; // read the piece on the square thats about to move
+                    Piece destpiece = board[x][y]; // read the destination piece on the square
+                    
+                    bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
+                    Piece epCapturedPiece = board[r][y]; // read the pawn captured via en passant
+                    if(isEnPassant)
+                        board[r][y] = Piece{}; // clear the pawn captured via en passant
+
+                    movePieceRaw(r, c, x, y);
+
+                    if(!isKingCheck(turn)) //succeed in escaping check
                     {
-                        if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::WHITE) //checks all the possible moves for the player's turn to escape check
-                        {
-                            Piece frompiece = board[r][c]; // read the piece on the square thats about to move
-                            Piece destpiece = board[x][y]; // read the destination piece on the square
-                            
-                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
-                            Piece epCapturedPiece = board[r][y]; // read the pawn captured via en passant
-                            if(isEnPassant)
-                                board[r][y] = Piece{}; // clear the pawn captured via en passant
-
-                            movePieceRaw(r, c, x, y);
-
-                            if(!isKingCheck(turn)) //succeed in escaping check
-                            {
-                                board[r][c] = frompiece; //undo moves
-                                board[x][y] = destpiece;
-                                board[r][y] = epCapturedPiece; //return back the pawn 
-                                return false;
-                            }
-                            else
-                            {
-                                board[r][c] = frompiece;
-                                board[x][y] = destpiece;
-                                board[r][y] = epCapturedPiece;
-                            }
-                        }
+                        board[r][c] = frompiece; //undo moves
+                        board[x][y] = destpiece;
+                        board[r][y] = epCapturedPiece; //return back the pawn 
+                        return false;
+                    }
+                    else
+                    {
+                        board[r][c] = frompiece;
+                        board[x][y] = destpiece;
+                        board[r][y] = epCapturedPiece;
                     }
                 }
             }
-        }
     }
     else
     {
-        for (int r = 0; r < 8; r++)
-        {
-            for (int c = 0; c < 8; c++)
+        for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++) for (int x = 0; x < 8; x++) for (int y = 0; y < 8; y++)
             {
-                for (int x = 0; x < 8; x++)
+                if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::BLACK)
                 {
-                    for (int y = 0; y < 8; y++)
+                    Piece frompiece = board[r][c];
+                    Piece destpiece = board[x][y];
+
+                    bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
+                    Piece epCapturedPiece = board[r][y];
+                    if(isEnPassant)
+                        board[r][y] = Piece{};
+
+                    movePieceRaw(r, c, x, y);
+
+                    if(!isKingCheck(turn))
                     {
-                        if (isLegalPieceMove(board[r][c], r, c, x, y, turn) && board[r][c].color == Color::BLACK)
-                        {
-                            Piece frompiece = board[r][c];
-                            Piece destpiece = board[x][y];
-
-                            bool isEnPassant = (board[r][c].type == PieceType::PAWN && c != y && board[x][y].type == PieceType::EMPTY);
-                            Piece epCapturedPiece = board[r][y];
-                            if(isEnPassant)
-                                board[r][y] = Piece{};
-
-                            movePieceRaw(r, c, x, y);
-
-                            if(!isKingCheck(turn))
-                            {
-                                board[r][c] = frompiece;
-                                board[x][y] = destpiece;
-                                board[r][y] = epCapturedPiece;
-                                return false;
-                            }
-                            else
-                            {
-                                board[r][c] = frompiece;
-                                board[x][y] = destpiece;
-                                board[r][y] = epCapturedPiece;
-                            }
-                        }
+                        board[r][c] = frompiece;
+                        board[x][y] = destpiece;
+                        board[r][y] = epCapturedPiece;
+                        return false;
+                    }
+                    else
+                    {
+                        board[r][c] = frompiece;
+                        board[x][y] = destpiece;
+                        board[r][y] = epCapturedPiece;
                     }
                 }
             }
-        }
     }
 
     if (!isKingCheck(turn)) //king is not in check, but no legal moves for the player too
@@ -1010,32 +940,95 @@ bool isCheckmateStalemate(int turn)
     }
 }
 
-
-int main(void)
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion)
 {
-    setupUnicodeConsole(); // must run before any special characters are printed
+    Piece frompiece = board[fromrow][fromcol];
+    Piece destpiece = board[torow][tocol];
+    Piece epCapturedPiece = board[fromrow][tocol];
+ 
+    if (frompiece.type == PieceType::EMPTY)
+        {
+            cout << "There is no piece on that square.\n";
+            return false;
+        }
 
-    setupStartPos();
+        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
+        {
+            cout << "That is not a legal move.\n";
+            return false;
+        }
+
+        if (!isColorMove(frompiece, turn))
+        {
+            return false;
+        }
+ 
+    int oldMoveCount = moveCount;
+    applyMove(fromrow, fromcol, torow, tocol, forcedPromotion);
+ 
+    if(isKingCheck(turn)) // check if the king is still in check after the current player's move
+        {
+            board[fromrow][fromcol] = frompiece;
+            board[torow][tocol] = destpiece; //undo move as king is still in check
+            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
+            printBoard();
+            moveCount = oldMoveCount;
+            if(turn % 2 == 0)
+            {
+                cout << "The White king is still in check.\n";
+                return false;
+            }
+            else
+            {
+                cout << "The Black king is still in check.\n";
+                return false;
+            }
+        }
+ 
+    turn++;
+    return true;
+}
+
+bool askYesNo(const string& prompt) // simple function for asking question with y/n answers
+{
+    cout << prompt << " (y/n): ";
+    string answer;
+    cin >> answer;
+    return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
+}
+
+void playGame()
+{
     printBoard();
-
+ 
     while (true)
     {
         int fromrow, fromcol, torow, tocol;
-        if (!readMove(fromrow, fromcol, torow, tocol))
+        if (!readMove(fromrow, fromcol, torow, tocol)) //if exiting program
         {
-            cout << "Exiting.\n";
-            break;
+            if (askYesNo("Save before returning to the menu?"))
+            {
+                cout << "Filename: ";
+                string filename; cin >> filename;
+                saveGame(filename);
+            }
+            return; //stops the loop
         }
-
-        if (!tryMakeMove(fromrow, fromcol, torow, tocol)) //check if the move succeded
+ 
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol))
             continue;
-
+ 
         printBoard();
 
         if(isCheckmateStalemate(turn)) // check if the next player's turn is checkmate or stalemate, if yes then stop game
         {
-            cout << "Exiting.\n";
-            break;
+            if (askYesNo("Save this game before returning to the menu?"))
+            {
+                cout << "Filename: ";
+                string filename; cin >> filename;
+                saveGame(filename);
+            }
+            return;
         }
 
         if(isKingCheck(turn)) // check if the next player's turn's king is in check
@@ -1052,6 +1045,54 @@ int main(void)
             }
         }
     }
+}
 
+void mainMenu()
+{
+    while (true)
+    {
+        cout << "\n===== CHESS =====\n";
+        cout << "1. New Game\n";
+        cout << "2. Load Game\n";
+        cout << "3. Exit\n";
+        cout << "Choice: ";
+ 
+        string choice;
+        cin >> choice;
+ 
+        if (choice == "1")
+        {
+            for (int r = 0; r < 8; r++)  //setup the chess board
+                for (int c = 0; c < 8; c++) 
+                    board[r][c] = Piece{};
+            setupStartPos();
+            moveCount = 0;
+            turn = 0;
+            playGame();
+        }
+        else if (choice == "2")
+        {
+            cout << "Filename: ";
+            string filename; 
+            cin >> filename;
+            loadGame(filename);
+            playGame();
+        }
+        else if (choice == "3")
+        {
+            cout << "Goodbye!\n";
+            return;
+        }
+        else
+        {
+            cout << "Invalid choice.\n";
+        }
+    }
+}
+
+int main(void)
+{
+    setupUnicodeConsole();
+    mainMenu();
     return 111;
 }
