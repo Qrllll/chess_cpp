@@ -159,12 +159,91 @@ bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether
     return true;
 }
 
+string squareName(int row, int col) // used in moveToNotation() to print the square names on board
+{
+    string s;
+    s += char('a' + col);
+    s += char('1' + row);
+    return s;
+}
+
+string moveToNotation(const Move& m)
+{
+    if (m.isCastleKingside)
+        return "0-0";
+    if (m.isCastleKingside)
+        return "0-0-0";
+
+    string result;
+    char pieceLetter = ' ';
+    switch (m.movedPiece.type)
+    {
+        case PieceType::KNIGHT: pieceLetter = 'N'; break;
+        case PieceType::BISHOP: pieceLetter = 'B'; break;
+        case PieceType::ROOK:   pieceLetter = 'R'; break;
+        case PieceType::QUEEN:  pieceLetter = 'Q'; break;
+        case PieceType::KING:   pieceLetter = 'K'; break;
+        default: break; // pawn: no letter
+    }
+
+    if (pieceLetter != ' ') result += pieceLetter; // first letter shows the type of piece
+
+    bool isCapture = (m.capturedPiece.type != PieceType::EMPTY) || m.isEnPassantCapture; // check whether there is a capture in the move
+
+    if (m.movedPiece.type == PieceType::PAWN && isCapture)
+        result += char('a' + m.fromcol); // pawn captures show the origin file
+    
+    if (isCapture) result += "x"; // x represents capture
+
+    result += squareName(m.torow, m.tocol); // adds the destination square
+
+    if (m.promotedTo != PieceType::EMPTY) // check whether the move had made a promotion. esult will be just destination and promotion type in the result
+    {
+        char promoLetter = ' ';
+        switch (m.promotedTo)
+        {
+        case PieceType::QUEEN:  promoLetter = 'Q'; break;
+        case PieceType::ROOK:   promoLetter = 'R'; break;
+        case PieceType::BISHOP: promoLetter = 'B'; break;
+        case PieceType::KNIGHT: promoLetter = 'N'; break;
+        default: break;
+        }
+        result += '=';
+        result += promoLetter;
+    }
+
+    return result;
+}
+
+
+void displayHistory()//display the move history eg 1. f3 e5 2. g4 Qh4#. 
+{
+    if (moveCount == 0) 
+    {
+        cout << "No moves played yet.\n"; 
+        return; 
+    }
+
+    for (int i = 0; i < moveCount; i++)
+    {
+        if (i % 2 == 0) // a single turn consists of displaying both white and black moves
+            cout << (i / 2 + 1) << ". " << moveToNotation(moveHistory[i]) << "  ";
+        else cout << moveToNotation(moveHistory[i]) << "\n";
+    }
+    if (moveCount % 2 == 1) cout << "\n"; // 2 turns in total for a single line of turn notation
+}
+
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
-    cout << "Enter move (e.g. e2e4): ";
+    cout << "Enter move (e.g. e2e4) or history: ";
     string input;
     cin >> input;
 
+    if (input == "history")
+    {
+        displayHistory();
+        return readMove(fromrow, fromcol, torow, tocol); // ask again
+    }
     if (input.size() != 4)
         return false;
     if (!checkRange(input[0], input[1], fromrow, fromcol))
@@ -223,7 +302,7 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     
     movePieceRaw(fromrow, fromcol, torow, tocol);
     
-    if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0)))
+    if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0))) // if it is white pawn, promotion happens at top row, and bottom row for black
     {
         PieceType chosen = choosePromotionPiece();
         board[torow][tocol].type = chosen;
