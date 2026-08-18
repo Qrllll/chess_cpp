@@ -69,7 +69,7 @@ char pieceChar(const Piece& p) // return the specific character for each pieces 
     return c;
 }
 
-PieceType choosePromotionPiece()
+PieceType choosePromotionPiece() // shows the promt to allow to player to choose its pawn promotion piece./
 {
     cout << "Pawn promotion! Choose a piece (Q/R/B/N): ";
     char choice;
@@ -84,11 +84,11 @@ PieceType choosePromotionPiece()
     }
 }
 
-void setupStartPos()
+void setupStartPos() //does what the function name shows
 {
     PieceType backRank[8] = {
         PieceType::ROOK, PieceType::KNIGHT, PieceType::BISHOP, PieceType::QUEEN,
-        PieceType::KING, PieceType::BISHOP, PieceType::KNIGHT, PieceType::ROOK };
+        PieceType::KING, PieceType::BISHOP, PieceType::KNIGHT, PieceType::ROOK }; //same back rank for white and black
 
     for (int c = 0; c < 8; c++)
     {
@@ -167,7 +167,7 @@ string squareName(int row, int col) // converts back the integer coordinate such
     return s;
 }
 
-string moveToNotation(const Move& m) // generates the formal chess notation such as "Nf3", "e4" etc
+string moveToNotation(const Move& m) // generates the formal chess notation such as "Nf3", "e4", "e8=Q" etc. used in displayHistory()
 {
     if (m.isCastleKingside)
         return "0-0";
@@ -183,21 +183,23 @@ string moveToNotation(const Move& m) // generates the formal chess notation such
         case PieceType::ROOK:   pieceLetter = 'R'; break;
         case PieceType::QUEEN:  pieceLetter = 'Q'; break;
         case PieceType::KING:   pieceLetter = 'K'; break;
-        default: break; // pawn: no letter
+        default: break; // pawn has no letter
     }
 
-    if (pieceLetter != ' ') result += pieceLetter; // first letter shows the type of piece
+    if (pieceLetter != ' ') 
+        result += pieceLetter; // first letter shows the type of piece
 
     bool isCapture = (m.capturedPiece.type != PieceType::EMPTY) || m.isEnPassantCapture; // check whether there is a capture in the move
 
     if (m.movedPiece.type == PieceType::PAWN && isCapture)
-        result += char('a' + m.fromcol); // pawn captures show the origin file
+        result += char('a' + m.fromcol); // pawn captures show the origin file of the capturing pawn
     
-    if (isCapture) result += "x"; // x represents capture
+    if (isCapture) 
+        result += "x"; // x represents capture
 
     result += squareName(m.torow, m.tocol); // adds the destination square
 
-    if (m.promotedTo != PieceType::EMPTY) // check whether the move had made a promotion. esult will be just destination and promotion type in the result
+    if (m.promotedTo != PieceType::EMPTY) // check whether the move had made a promotion
     {
         char promoLetter = ' ';
         switch (m.promotedTo)
@@ -216,7 +218,7 @@ string moveToNotation(const Move& m) // generates the formal chess notation such
 }
 
 
-void displayHistory()//display the move history eg 1. f3 e5 2. g4 Qh4#. 
+void displayHistory()//display the move history eg '1. f3 e5 2. g4 Qh4#' for a simple game.
 {
     if (moveCount == 0) 
     {
@@ -226,14 +228,15 @@ void displayHistory()//display the move history eg 1. f3 e5 2. g4 Qh4#.
 
     for (int i = 0; i < moveCount; i++)
     {
-        if (i % 2 == 0) // a single turn consists of displaying both white and black moves
-            cout << (i / 2 + 1) << ". " << moveToNotation(moveHistory[i]) << "  ";
-        else cout << moveToNotation(moveHistory[i]) << "\n";
+        if (i % 2 == 0) // a single turn consists of displaying both white and black moves, hence 2 turns in total for a single line of turn notation
+            cout << (i / 2 + 1) << ". " << moveToNotation(moveHistory[i]) << "  "; //increase the '1.' count at evem numbers
+        else 
+            cout << moveToNotation(moveHistory[i]) << "\n";
     }
-    if (moveCount % 2 == 1) cout << "\n"; // 2 turns in total for a single line of turn notation
+    if (moveCount % 2 == 1) cout << "\n";
 }
 
-char promoToChar(PieceType t)
+char promoToChar(PieceType t) //changes a PieceType variable to a char variable
 {
     switch (t)
     {
@@ -244,7 +247,7 @@ char promoToChar(PieceType t)
     }
 }
  
-PieceType charToPromo(char c)
+PieceType charToPromo(char c) //vice verse from the function above
 {
     switch (toupper(c))
     {
@@ -256,7 +259,7 @@ PieceType charToPromo(char c)
 }
 
 //function declaraction for undoMove() and loadGame()
-bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY);
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion);
 void undoMove()
 {
     if (moveCount == 0) 
@@ -268,7 +271,7 @@ void undoMove()
     int targetCount = moveCount - 1;
     Move replayMoves[MAX_MOVES];
     for (int i = 0; i < targetCount; i++) 
-        replayMoves[i] = moveHistory[i];
+        replayMoves[i] = moveHistory[i]; // get all the moves done up until the previous last move
  
     for (int r = 0; r < 8; r++) 
         for (int c = 0; c < 8; c++) 
@@ -314,7 +317,7 @@ void loadGame(const string& filename)
     getline(f, header);
     if (header != "CHESSSAVE1") { cout << "Unrecognized save file format.\n"; return; } // returns error that its an unknown file type
  
-    // Reset to a fresh game before replaying.
+    // reset to a fresh game before replaying
     for (int r = 0; r < 8; r++) 
         for (int c = 0; c < 8; c++) 
             board[r][c] = Piece{};
@@ -324,7 +327,7 @@ void loadGame(const string& filename)
  
     string line;
     int nummoves = 0;
-    while (getline(f, line)) //reads every line of the file until it cant read any more lines
+    while (getline(f, line)) //reads every line of the file to verify it is all valid
     {
         if (line.empty()) 
             continue;
@@ -449,10 +452,10 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedP
     
     movePieceRaw(fromrow, fromcol, torow, tocol);
     
-    if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0))) // if it is white pawn, promotion happens at top row, and bottom row for black
+    if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0))) // if it is white pawn, promotion happens at top row, bottom row for black
     {
         PieceType chosen;
-        if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without askin
+        if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without asking
             chosen = forcedPromotion;
         else
             chosen = choosePromotionPiece();
@@ -940,7 +943,7 @@ bool isCheckmateStalemate(int turn)
     }
 }
 
-bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion)
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY)
 {
     Piece frompiece = board[fromrow][fromcol];
     Piece destpiece = board[torow][tocol];
