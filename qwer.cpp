@@ -816,8 +816,6 @@ int main(void)
 
     while (true)
     {
-        isKingCheck(turn);
-
         int fromrow, fromcol, torow, tocol;
         if (!readMove(fromrow, fromcol, torow, tocol))
         {
