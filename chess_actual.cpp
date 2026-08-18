@@ -1027,52 +1027,10 @@ int main(void)
             break;
         }
 
-        Piece frompiece = board[fromrow][fromcol]; // read the piece on the square thats about to move
-        Piece destpiece = board[torow][tocol]; // read the destination piece on the square
-        Piece epCapturedPiece = board[fromrow][tocol]; // read the captured piece if it was en passant
-        
-        if (frompiece.type == PieceType::EMPTY)
-        {
-            cout << "There is no piece on that square.\n";
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol)) //check if the move succeded
             continue;
-        }
-
-        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
-        {
-            cout << "That is not a legal move.\n";
-            continue;
-        }
-
-        if (!isColorMove(frompiece, turn))
-        {
-            continue;
-        }
-
-
-        int oldMoveCount = moveCount; // if a check still exist after moving for the current players turn, reinitiallize the movecount after applyMove()
-        applyMove(fromrow, fromcol, torow, tocol);
-
-        if(isKingCheck(turn)) // check if the king is still in check after the current player's move
-        {
-            board[fromrow][fromcol] = frompiece;
-            board[torow][tocol] = destpiece; //undo move as king is still in check
-            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
-            printBoard();
-            moveCount = oldMoveCount;
-            if(turn % 2 == 0)
-            {
-                cout << "The White king is still in check.\n";
-                continue;
-            }
-            else
-            {
-                cout << "The Black king is still in check.\n";
-                continue;
-            }
-        }
 
         printBoard();
-        turn++;
 
         if(isCheckmateStalemate(turn)) // check if the next player's turn is checkmate or stalemate, if yes then stop game
         {
