@@ -859,12 +859,12 @@ int main(void)
             moveCount = oldMoveCount;
             if(turn % 2 == 0)
             {
-                cout << "The White king is in check.\n";
+                cout << "The White king is still in check.\n";
                 continue;
             }
             else
             {
-                cout << "The Black king is in check.\n";
+                cout << "The Black king is still in check.\n";
                 continue;
             }
         }
