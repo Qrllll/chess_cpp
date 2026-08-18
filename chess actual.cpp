@@ -159,7 +159,7 @@ bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether
     return true;
 }
 
-string squareName(int row, int col) // used in moveToNotation() to print the square names on board
+string squareName(int row, int col) // converts back the integer coordinate such as 07 back to a8
 {
     string s;
     s += char('a' + col);
