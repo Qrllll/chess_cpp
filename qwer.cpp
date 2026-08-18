@@ -852,23 +852,18 @@ int main(void)
 
         if(isKingCheck(turn)) // check if the king is still in check after the current player's move
         {
+            board[fromrow][fromcol] = frompiece;
+            board[torow][tocol] = destpiece; //undo move as king is still in check
+            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
+            printBoard();
+            moveCount = oldMoveCount;
             if(turn % 2 == 0)
             {
-                board[fromrow][fromcol] = frompiece;
-                board[torow][tocol] = destpiece; //undo move as king is still in check
-                board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
-                printBoard();
-                moveCount = oldMoveCount;
                 cout << "The White king is in check.\n";
                 continue;
             }
             else
             {
-                board[fromrow][fromcol] = frompiece;
-                board[torow][tocol] = destpiece;
-                board[fromrow][tocol] = epCapturedPiece;
-                printBoard();
-                moveCount = oldMoveCount;
                 cout << "The Black king is in check.\n";
                 continue;
             }
