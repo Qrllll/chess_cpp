@@ -398,9 +398,9 @@ void loadGame(const string& filename)
  
         PieceType forcedPromotion;
         if((line.size() == 5))
-            charToPromo(line[4]);
+            forcedPromotion = charToPromo(line[4]);
         else
-            PieceType::EMPTY;
+            forcedPromotion = PieceType::EMPTY;
  
         if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion))
         {
@@ -507,7 +507,7 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedP
         if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without askin
             chosen = forcedPromotion;
         else
-            choosePromotionPiece();
+            chosen = choosePromotionPiece();
 
         board[torow][tocol].type = chosen;
         m.promotedTo = chosen;
