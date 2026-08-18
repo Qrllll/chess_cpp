@@ -167,7 +167,7 @@ string squareName(int row, int col) // converts back the integer coordinate such
     return s;
 }
 
-string moveToNotation(const Move& m)
+string moveToNotation(const Move& m) // generates the formal chess notation such as "Nf3", "e4" etc
 {
     if (m.isCastleKingside)
         return "0-0";
@@ -233,17 +233,216 @@ void displayHistory()//display the move history eg 1. f3 e5 2. g4 Qh4#.
     if (moveCount % 2 == 1) cout << "\n"; // 2 turns in total for a single line of turn notation
 }
 
+char promoToChar(PieceType t)
+{
+    switch (t)
+    {
+    case PieceType::ROOK:   return 'r';
+    case PieceType::BISHOP: return 'b';
+    case PieceType::KNIGHT: return 'n';
+    default:                return 'q';
+    }
+}
+ 
+PieceType charToPromo(char c)
+{
+    switch (toupper(c))
+    {
+    case 'R': return PieceType::ROOK;
+    case 'B': return PieceType::BISHOP;
+    case 'N': return PieceType::KNIGHT;
+    default:  return PieceType::QUEEN;
+    }
+}
+
+
+//function declaration for the tryMakeMove()
+void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion);
+bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn);
+bool isColorMove(const Piece& piece, int& turn);
+bool isKingCheck(int turn);
+
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY)
+{
+    Piece frompiece = board[fromrow][fromcol];
+    Piece destpiece = board[torow][tocol];
+    Piece epCapturedPiece = board[fromrow][tocol];
+ 
+    if (frompiece.type == PieceType::EMPTY)
+        {
+            cout << "There is no piece on that square.\n";
+            return false;
+        }
+
+        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
+        {
+            cout << "That is not a legal move.\n";
+            return false;
+        }
+
+        if (!isColorMove(frompiece, turn))
+        {
+            return false;
+        }
+ 
+    int oldMoveCount = moveCount;
+    applyMove(fromrow, fromcol, torow, tocol, forcedPromotion);
+ 
+    if(isKingCheck(turn)) // check if the king is still in check after the current player's move
+        {
+            board[fromrow][fromcol] = frompiece;
+            board[torow][tocol] = destpiece; //undo move as king is still in check
+            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
+            printBoard();
+            moveCount = oldMoveCount;
+            if(turn % 2 == 0)
+            {
+                cout << "The White king is still in check.\n";
+                return false;
+            }
+            else
+            {
+                cout << "The Black king is still in check.\n";
+                return false;
+            }
+        }
+ 
+    turn++;
+    return true;
+}
+
+void undoMove()
+{
+    if (moveCount == 0) 
+    {
+        cout << "Nothing to undo.\n";
+        return;
+    }
+ 
+    int targetCount = moveCount - 1;
+    Move replayMoves[MAX_MOVES];
+    for (int i = 0; i < targetCount; i++) 
+        replayMoves[i] = moveHistory[i];
+ 
+    for (int r = 0; r < 8; r++) 
+        for (int c = 0; c < 8; c++) 
+            board[r][c] = Piece{}; //re-setup the board
+            setupStartPos();
+            moveCount = 0;
+            turn = 0;
+ 
+    for (int i = 0; i < targetCount; i++) //redo all the previous moves
+        tryMakeMove(replayMoves[i].fromrow, replayMoves[i].fromcol, replayMoves[i].torow, replayMoves[i].tocol, replayMoves[i].promotedTo);
+ 
+    cout << "Undid the last move.\n";
+    printBoard();
+}
+
+void saveGame(const string& filename)
+{
+    ofstream f(filename);
+    if (!f) { cout << "Could not open file for writing: " << filename << "\n"; return; }
+ 
+    f << "CHESSSAVE1\n"; //as the file format
+    for (int i = 0; i < moveCount; i++)
+    {
+        const Move& m = moveHistory[i]; //saves a move by outputting eg "e2e3" or "e7e8Q" if there is a promotion
+        f << squareName(m.fromrow, m.fromcol) << squareName(m.torow, m.tocol);
+        if (m.promotedTo != PieceType::EMPTY) 
+            f << promoToChar(m.promotedTo);
+        f << "\n"; //one line for one move
+    }
+    cout << "Game saved to " << filename << " (" << moveCount << " moves).\n";
+}
+
+void loadGame(const string& filename)
+{
+    ifstream f(filename);
+    if (!f) 
+    {
+        cout << "Could not open file: " << filename << "\n";
+        return;
+    } // returns error that it cant find the file
+ 
+    string header;
+    getline(f, header);
+    if (header != "CHESSSAVE1") { cout << "Unrecognized save file format.\n"; return; } // returns error that its an unknown file type
+ 
+    // Reset to a fresh game before replaying.
+    for (int r = 0; r < 8; r++) 
+        for (int c = 0; c < 8; c++) 
+            board[r][c] = Piece{};
+            setupStartPos();
+            moveCount = 0;
+            turn = 0;
+ 
+    string line;
+    int nummoves = 0;
+    while (getline(f, line)) //reads every line of the file until it cant read any more lines
+    {
+        if (line.empty()) 
+            continue;
+
+        if (line.size() != 4 && line.size() != 5) //check whether it is a valid move stored eg "e2e3"  or "e7e8Q"
+        {
+            cout << "Warning: malformed line '" << line << "' in save file. Stopping replay.\n";
+            break;
+        }
+ 
+        int fromrow, fromcol, torow, tocol;
+        if (!checkRange(line[0], line[1], fromrow, fromcol) || !checkRange(line[2], line[3], torow, tocol)) //check whether the moves in the file is a valid range, something like "z9" will be rejected
+        {
+            cout << "Warning: invalid square in '" << line << "'. Stopping replay.\n";
+            break;
+        }
+ 
+        PieceType forcedPromotion;
+        if((line.size() == 5))
+            charToPromo(line[4]);
+        else
+            PieceType::EMPTY;
+ 
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion))
+        {
+            cout << "Warning: move '" << line << "' from save file is illegal. Stopping replay.\n";
+            break;
+        }
+        nummoves++;
+    }
+ 
+    cout << "Loaded " << filename << ": " << nummoves << " moves replayed successfully.\n";
+    printBoard();
+}
+
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
-    cout << "Enter move (e.g. e2e4) or history: ";
+    cout << "Enter move (e.g. e2e4), 'history', 'undo', 'save <file>' or 'load <file>: ";
     string input;
     cin >> input;
 
     if (input == "history")
     {
         displayHistory();
-        return readMove(fromrow, fromcol, torow, tocol); // ask again
+        return readMove(fromrow, fromcol, torow, tocol);
     }
+    if (input == "undo")
+    {
+        undoMove();
+        return readMove(fromrow, fromcol, torow, tocol);
+    }
+    if (input == "save")
+    {
+        string filename; cin >> filename;
+        saveGame(filename);
+        return readMove(fromrow, fromcol, torow, tocol);
+    }
+    if (input == "load")
+    {
+        string filename; cin >> filename;
+        loadGame(filename);
+        return readMove(fromrow, fromcol, torow, tocol);
+    }
+    
     if (input.size() != 4)
         return false;
     if (!checkRange(input[0], input[1], fromrow, fromcol))
@@ -261,7 +460,7 @@ void movePieceRaw(int fromrow, int fromcol, int torow, int tocol)
     board[fromrow][fromcol] = Piece{};
 }
 
-void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main function to move the pieces, and store the move history on each turn
+void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY) // used in main function to move the pieces, and store the move history on each turn
 {
     Piece frompiece = board[fromrow][fromcol];
     Piece destpiece = board[torow][tocol];
@@ -304,7 +503,12 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol) // used in main f
     
     if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0))) // if it is white pawn, promotion happens at top row, and bottom row for black
     {
-        PieceType chosen = choosePromotionPiece();
+        PieceType chosen;
+        if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without askin
+            chosen = forcedPromotion;
+        else
+            choosePromotionPiece();
+
         board[torow][tocol].type = chosen;
         m.promotedTo = chosen;
     }
@@ -823,52 +1027,10 @@ int main(void)
             break;
         }
 
-        Piece frompiece = board[fromrow][fromcol]; // read the piece on the square thats about to move
-        Piece destpiece = board[torow][tocol]; // read the destination piece on the square
-        Piece epCapturedPiece = board[fromrow][tocol]; // read the captured piece if it was en passant
-        
-        if (frompiece.type == PieceType::EMPTY)
-        {
-            cout << "There is no piece on that square.\n";
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol)) //check if the move succeded
             continue;
-        }
-
-        if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
-        {
-            cout << "That is not a legal move.\n";
-            continue;
-        }
-
-        if (!isColorMove(frompiece, turn))
-        {
-            continue;
-        }
-
-
-        int oldMoveCount = moveCount; // if a check still exist after moving for the current players turn, reinitiallize the movecount after applyMove()
-        applyMove(fromrow, fromcol, torow, tocol);
-
-        if(isKingCheck(turn)) // check if the king is still in check after the current player's move
-        {
-            board[fromrow][fromcol] = frompiece;
-            board[torow][tocol] = destpiece; //undo move as king is still in check
-            board[fromrow][tocol] = epCapturedPiece; // undo move if it was en passant capture move
-            printBoard();
-            moveCount = oldMoveCount;
-            if(turn % 2 == 0)
-            {
-                cout << "The White king is still in check.\n";
-                continue;
-            }
-            else
-            {
-                cout << "The Black king is still in check.\n";
-                continue;
-            }
-        }
 
         printBoard();
-        turn++;
 
         if(isCheckmateStalemate(turn)) // check if the next player's turn is checkmate or stalemate, if yes then stop game
         {
