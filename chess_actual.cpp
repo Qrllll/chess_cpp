@@ -53,6 +53,18 @@ string pieceChar(const Piece& p) // return the specific unicode chess symbol for
     if (p.color == Color::WHITE) // solid outline glyphs for white pieces
         switch (p.type)
         {
+            default:                return " "; // empty square
+            case PieceType::PAWN:   return "\u265F"; // ♟
+            case PieceType::KNIGHT: return "\u265E"; // ♞
+            case PieceType::BISHOP: return "\u265D"; // ♝
+            case PieceType::ROOK:   return "\u265C"; // ♜
+            case PieceType::QUEEN:  return "\u265B"; // ♛
+            case PieceType::KING:   return "\u265A"; // ♚
+            
+        }
+
+    switch (p.type) // solid filled glyphs for black pieces
+    {
         default:                return " "; // empty square
         case PieceType::PAWN:   return "\u2659"; // ♙
         case PieceType::KNIGHT: return "\u2658"; // ♘
@@ -60,17 +72,6 @@ string pieceChar(const Piece& p) // return the specific unicode chess symbol for
         case PieceType::ROOK:   return "\u2656"; // ♖
         case PieceType::QUEEN:  return "\u2655"; // ♕
         case PieceType::KING:   return "\u2654"; // ♔
-        }
-
-    switch (p.type) // solid filled glyphs for black pieces
-    {
-    default:                return " "; // empty square
-    case PieceType::PAWN:   return "\u265F"; // ♟
-    case PieceType::KNIGHT: return "\u265E"; // ♞
-    case PieceType::BISHOP: return "\u265D"; // ♝
-    case PieceType::ROOK:   return "\u265C"; // ♜
-    case PieceType::QUEEN:  return "\u265B"; // ♛
-    case PieceType::KING:   return "\u265A"; // ♚
     }
 }
 
