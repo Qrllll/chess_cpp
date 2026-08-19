@@ -1069,6 +1069,17 @@ bool askYesNo(const string& prompt) // simple function for asking question with 
 void playGame()
 {
     printBoard();
+
+    if (isCheckmateStalemate(turn))
+    {
+        if (askYesNo("This game has already ended. Save it as a new file before returning to the menu?"))
+        {
+            cout << "Filename: ";
+            string filename; cin >> filename;
+            saveGame(filename);
+        }
+        return;
+    }
  
     while (true)
     {
