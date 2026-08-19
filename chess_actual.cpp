@@ -1092,7 +1092,7 @@ void playGame()
         if(isCheckmateStalemate(turn)) // check if the next player's turn is checkmate or stalemate, if yes then stop game
         {
 
-            displayStatictics();
+            displayStatistics();
             if (askYesNo("Save this game before returning to the menu?"))
             {
                 cout << "Filename: ";
