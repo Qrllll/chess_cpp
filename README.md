@@ -1,5 +1,61 @@
 functions
 
+
+char pieceChar()
+takes a pieceType variable and converts it into a char. used in printBoard() in order to display the pieces.
+
+
+choosePromotionPiece()
+allows the player to choose the pawn promotion piece.
+
+
+void setupStartPos()
+as the name implies.
+
+
+void printboard()
+as the name implies.
+
+
+bool checkRange
+check whether the input such as "e2e3" is a valid range in the board, and returns its respective coordinate in integer for the board[][].
+
+
+string squareName()
+converts a integer coordinate such as "07" back to "a8"
+
+
+string moveToNotation()
+generates the formal chess notation sch as "Nf3", "e4", "e8=Q" to be used in displayHistory()
+
+
+void displayHistory()
+prints out the move history
+a turn contains 2 moves, each from a playerm and uses the formal chess notation to display as opposed to something like "e2e3" from the user input.
+
+
+int pieceValue()
+assigns a value to each pieces, which is used in displayStatistics()
+
+
+void displayStatistics()
+display the statistics of the match after it had ended or when the user prompts it.
+
+
+char promoTochar() and pieceType charToPromo
+changed a PieceType variable to char variable and vice versa
+
+
+void undoMove()
+undo the move that a player made.
+1) gets all the moves that had been made up until before the last move
+2) resetups the whole board to its initial state
+3) replay all the moves again with tryMakeMove()
+
+
+void saveGame()
+
+
 movePieceRaw()
 purely for moving a piece, and make the property hasMoved to true
 it is mainly used in the function applyMove()
@@ -18,7 +74,8 @@ what it handles:
 1) if it is a pawn, stores whether it had double stepped (will be used to determine the validity of en passant for the next move)
 2) if it is pawn moving diagonally to an empty square = en passant. properly handles the capturing by removing the captured pawn as movePieceRaw dosent cover capturing pieces that arent on the final destination.
 3) if it is a king moving 2 colums  = castling. properly handles the movement of the rook and king as there is 2 pieces moving at the same turn, and stores whether it is a king or queen side castle.
-4) if it is a pawn moving towards the opponent's side, handles the promotion with function call choosePromotionPiece() and stores the promotion info.
+4) if it is a pawn moving towards the opponent's side, handles the promotion with function call choosePromotionPiece() and stores the promotion info, or if it was from a save file, skips the prompt to ask for the promotion and instantly promotes
+note: the property giveCheck in only made true in tryMakeMove as it requires to check if the king is check in the next player's turn.
 
 
 bool isEnPassant()
@@ -81,3 +138,22 @@ it is done in a few stages
 4) if the search completes, it means there are no legal moves available. a function call isKingCheck() runs again. 
      A) if it is false it means the current player is in stalemate, but not in check.
      B) if it is true, the current player is checkmated
+
+
+bool tryMakeMove()
+the main function for handling the player's move.
+a few basic checks is done before applymove() is called to make the move
+1) check whether the user had selected a piece and not am empty square
+2) check whether the piece movement is a legal piece move
+3) check whether the piece selected is the player's piece
+if after the move, the player's king is in check, undo the moves, revert the moveCount and returns false, which allows the playGame() function to reprompt the player to enter another input.
+
+
+void playGame()
+handles the ingame menu such as
+1) running the actual game
+2) allows the player to save game midgame or after the game ends
+
+
+void mainMemu()
+main menu of the game, which has the option to load a saved game or start a new game
