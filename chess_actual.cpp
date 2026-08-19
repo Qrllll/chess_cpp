@@ -15,6 +15,8 @@ using namespace std;
 
 enum class PieceType { EMPTY, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING }; //initialize the types of pieces
 enum class Color { NONE, WHITE, BLACK }; //pieces color
+enum class GameResult { ONGOING, WHITE_RESIGNED, BLACK_RESIGNED, DRAW_AGREED }; //for the save file
+
 
 struct Piece // what a piece is made up of
 {
@@ -40,9 +42,10 @@ struct Move // what a move contains
 
 Piece board[8][8]; // the array for the pieces in the board
 const int MAX_MOVES = 1000;
-Move moveHistory[MAX_MOVES];
+Move moveHistory[MAX_MOVES]; // max 1k move history
 int moveCount = 0;
 int turn = 0;
+GameResult gameResult = GameResult::ONGOING; //default game state in a save file
 
 char pieceChar(const Piece& p) // return the specific character for each pieces, used in printBoard()
 {
@@ -50,18 +53,12 @@ char pieceChar(const Piece& p) // return the specific character for each pieces,
     switch (p.type)
     {
     default: return ' '; // empty spaces for no pieces
-    case PieceType::PAWN:
-        c = 'p'; break;
-    case PieceType::KNIGHT:
-        c = 'n'; break;
-    case PieceType::BISHOP:
-        c = 'b'; break;
-    case PieceType::ROOK:
-        c = 'r'; break;
-    case PieceType::QUEEN:
-        c = 'q'; break;
-    case PieceType::KING:
-        c = 'k'; break;
+    case PieceType::PAWN:   c = 'p'; break;
+    case PieceType::KNIGHT: c = 'n'; break;
+    case PieceType::BISHOP: c = 'b'; break;
+    case PieceType::ROOK:   c = 'r'; break;
+    case PieceType::QUEEN:  c = 'q'; break;
+    case PieceType::KING:   c = 'k'; break;
     }
 
     if (p.color == Color::WHITE) // uppercase for white side pieces
@@ -128,7 +125,7 @@ void setupStartPos() //does what the function name shows
 void printBoard(void)
 {
     //top border ┌───┬───┬───┬───┬───┬───┬───┬───┐
-    cout << "  ┌";
+    cout << "\n  ┌";
 
     for (int i = 0; i < 7; i++)
         cout << "───" << "┬";
@@ -167,6 +164,14 @@ void printBoard(void)
 
     // bottom file labels
     cout << "    a   b   c   d   e   f   g   h\n";
+}
+
+bool askYesNo(const string& prompt) // simple function for asking question with y/n answers
+{
+    cout << prompt << " (y/n): ";
+    string answer;
+    cin >> answer;
+    return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
 }
 
 bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether the input is within the range of the board, and returns the actual position of the piece in the board[][] coordinate;
@@ -359,6 +364,15 @@ void saveGame(const string& filename)
             f << promoToChar(m.promotedTo);
         f << "\n"; //one line for one move
     }
+
+    switch (gameResult)
+    {
+    case GameResult::WHITE_RESIGNED: f << "RESULT:WHITE_RESIGNED\n"; break;
+    case GameResult::BLACK_RESIGNED: f << "RESULT:BLACK_RESIGNED\n"; break;
+    case GameResult::DRAW_AGREED:    f << "RESULT:DRAW_AGREED\n";    break;
+    default: break; // ONGOING: nothing to write
+    }
+
     cout << "Game saved to " << filename << " (" << moveCount << " moves).\n";
 }
 
@@ -382,6 +396,7 @@ void loadGame(const string& filename)
             setupStartPos();
             moveCount = 0;
             turn = 0;
+            gameResult = GameResult::ONGOING;
  
     string line;
     int nummoves = 0;
@@ -389,6 +404,15 @@ void loadGame(const string& filename)
     {
         if (line.empty()) 
             continue;
+
+        if (line.rfind("RESULT:", 0) == 0) //.rfind = read from the reverse, which is the bottom of the file, and find the string "RESULT:". if found, then return 0
+        {
+            string resultCode = line.substr(7); // read the line starting from the position 7(note: first position is 0).
+            if (resultCode == "WHITE_RESIGNED") gameResult = GameResult::WHITE_RESIGNED;
+            else if (resultCode == "BLACK_RESIGNED") gameResult = GameResult::BLACK_RESIGNED;
+            else if (resultCode == "DRAW_AGREED") gameResult = GameResult::DRAW_AGREED;
+            continue;
+        }    
 
         if (line.size() != 4 && line.size() != 5) //check whether it is a valid move stored eg "e2e3"  or "e7e8Q"
         {
@@ -403,13 +427,13 @@ void loadGame(const string& filename)
             break;
         }
  
-        PieceType forcedPromotion;
+        PieceType forcedPromotion; //check the promotion piece
         if((line.size() == 5))
             forcedPromotion = charToPromo(line[4]);
         else
             forcedPromotion = PieceType::EMPTY;
  
-        if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion))
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion)) //safety check if one of the movse cant be done
         {
             cout << "Warning: move '" << line << "' from save file is illegal. Stopping replay.\n";
             break;
@@ -427,7 +451,7 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
     else
         cout << "It is Blacks's turn\n";
 
-    cout << "Enter move (e.g. e2e4), 'history', 'stats', 'undo', 'save <file>', 'load <file>' or 'quit':";
+    cout << "Enter move (e.g. e2e4), 'history', 'stats', 'undo', 'save <file>', 'load <file>', 'resign', 'draw' or 'quit': ";
     string input;
     cin >> input;
 
@@ -460,6 +484,54 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
         string filename; cin >> filename;
         loadGame(filename);
         return readMove(fromrow, fromcol, torow, tocol, turn);
+    }
+    if (input == "resign")
+    {
+        if((turn % 2 == 0))
+        {
+            gameResult = GameResult::WHITE_RESIGNED;
+            cout << "White resigns. Black wins.\n";
+        }
+        else
+        {
+            gameResult = GameResult::BLACK_RESIGNED;
+            cout << "Black resigns. White wins.\n";
+        }
+
+        displayHistory();
+        displayStatistics();
+        return false;
+    }
+    if (input == "draw")
+    {
+        if((turn % 2 == 0)) // white turn
+        {
+            cout << "White offers a draw.\n";
+            if(askYesNo("Does Black accept the draw?"))
+            {
+                gameResult = GameResult::DRAW_AGREED;
+                cout << "Draw agreed.\n";
+            }
+            else
+            {
+                cout << "Draw declined.\n";
+                return readMove(fromrow, fromcol, torow, tocol, turn);  
+            }
+        }
+        else
+        {
+            cout << "Black offers a draw.\n";
+            if(askYesNo("Does White accept the draw?"))
+                {
+                    gameResult = GameResult::DRAW_AGREED;
+                    cout << "Draw agreed.\n";
+                }
+            else
+            {
+                cout << "Draw declined.\n";
+                return readMove(fromrow, fromcol, torow, tocol, turn);  
+            }
+        }
     }
     
     if(input.size() != 4 || !checkRange(input[0], input[1], fromrow, fromcol) || !checkRange(input[2], input[3], torow, tocol))
@@ -1064,21 +1136,17 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
     return true;
 }
 
-bool askYesNo(const string& prompt) // simple function for asking question with y/n answers
-{
-    cout << prompt << " (y/n): ";
-    string answer;
-    cin >> answer;
-    return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
-}
-
 void playGame()
 {
     printBoard();
 
-    if (isCheckmateStalemate(turn)) //if the loaded game has ended, instantly shows the statistic and return to the main page
+    if (isCheckmateStalemate(turn) || gameResult != GameResult::ONGOING)
     {
-        if (askYesNo("This game has already ended. Want to see the move history and statistics of the game?"))
+        if (gameResult == GameResult::WHITE_RESIGNED) cout << "This game already ended: White resigned.\n";
+        else if (gameResult == GameResult::BLACK_RESIGNED) cout << "This game already ended: Black resigned.\n";
+        else if (gameResult == GameResult::DRAW_AGREED) cout << "This game already ended: draw agreed.\n";
+
+        if (askYesNo("Want to see the move history and statistics of the game?"))
         {
             displayHistory();
             displayStatistics();
@@ -1156,6 +1224,7 @@ void mainMenu()
             setupStartPos();
             moveCount = 0;
             turn = 0;
+            gameResult = GameResult::ONGOING;
             playGame();
         }
         else if (choice == "2")
