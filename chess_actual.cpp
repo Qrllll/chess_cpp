@@ -71,10 +71,10 @@ char promoToChar(PieceType t) //changes a PieceType variable to a char variable.
 {
     switch (t)
     {
-    case PieceType::ROOK:   return 'r';
-    case PieceType::BISHOP: return 'b';
-    case PieceType::KNIGHT: return 'n';
     default:                return 'q';
+    case PieceType::ROOK:   return 'r'; break;
+    case PieceType::BISHOP: return 'b'; break;
+    case PieceType::KNIGHT: return 'n'; break;
     }
 }
  
@@ -82,10 +82,10 @@ PieceType charToPromo(char c) //vice verse from the function above
 {
     switch (toupper(c))
     {
-    case 'R': return PieceType::ROOK;
-    case 'B': return PieceType::BISHOP;
-    case 'N': return PieceType::KNIGHT;
     default:  return PieceType::QUEEN;
+    case 'R': return PieceType::ROOK;   break;
+    case 'B': return PieceType::BISHOP; break;
+    case 'N': return PieceType::KNIGHT; break;
     }
 }
 
@@ -97,14 +97,14 @@ PieceType choosePromotionPiece() // shows the promt to allow to player to choose
     choice = toupper(choice);
     switch (choice)
     {
-    case 'R': return PieceType::ROOK;
-    case 'B': return PieceType::BISHOP;
-    case 'N': return PieceType::KNIGHT;
     default:  return PieceType::QUEEN;
+    case 'R': return PieceType::ROOK;   break;
+    case 'B': return PieceType::BISHOP; break;
+    case 'N': return PieceType::KNIGHT; break;
     }
 }
 
-void setupStartPos() //does what the function name shows
+void setupStartPos() //setup the starting position for the board
 {
     PieceType backRank[8] = {
         PieceType::ROOK, PieceType::KNIGHT, PieceType::BISHOP, PieceType::QUEEN,
@@ -174,7 +174,7 @@ bool askYesNo(const string& prompt) // simple function for asking question with 
     return !answer.empty() && (answer[0] == 'y' || answer[0] == 'Y');
 }
 
-bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether the input is within the range of the board, and returns the actual position of the piece in the board[][] coordinate;
+bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether the input is within the range of the board, and returns the actual position of the piece in the board[][] coordinate such as "07" for "a8";
 {
     int col = file - 'a';
     int row = rank - '1';
@@ -197,7 +197,7 @@ string squareName(int row, int col) // converts back the integer coordinate such
 
 string moveToNotation(const Move& m) // generates the formal chess notation such as "Nf3", "e4", "e8=Q" etc. used in displayHistory()
 {
-    if (m.isCastleKingside)
+    if (m.isCastleKingside)  //number of 0s represent the number of sqaures the rook had moved
         return "0-0";
     if (m.isCastleKingside)
         return "0-0-0";
@@ -259,7 +259,7 @@ void displayHistory()//display the move history eg '1. f3 e5 2. g4 Qh4#' for a s
     for (int i = 0; i < moveCount; i++)
     {
         if (i % 2 == 0) // a single turn consists of displaying both white and black moves, hence 2 turns in total for a single line of turn notation
-            cout << (i / 2 + 1) << ". " << moveToNotation(moveHistory[i]) << "  "; //increase the '1.' count at evem numbers
+            cout << (i / 2 + 1) << ". " << moveToNotation(moveHistory[i]) << "  "; //increase the turn count at even numbers
         else 
             cout << moveToNotation(moveHistory[i]) << "\n";
     }
