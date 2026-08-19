@@ -69,8 +69,7 @@ if somewhere in the line contains a invalid move, it stop reading the file and r
 
 
 void readMove()
-the main function that reads the input from the player. has a few functions stated inside the function.
-
+the main function that reads the input from the player. shows the current player's turn first, and allow the player to input a few functions as available.
 
 movePieceRaw()
 purely for moving a piece, and make the property hasMoved to true
