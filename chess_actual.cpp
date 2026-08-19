@@ -874,7 +874,8 @@ bool isCheckmateStalemate(int turn)
                     if(isEnPassant)
                         board[r][y] = Piece{}; // clear the pawn captured via en passant
 
-                    movePieceRaw(r, c, x, y);
+                    board[torow][tocol] = board[fromrow][fromcol];
+                    board[fromrow][fromcol] = Piece{};
 
                     if(!isKingCheck(turn)) //succeed in escaping check
                     {
@@ -906,7 +907,8 @@ bool isCheckmateStalemate(int turn)
                     if(isEnPassant)
                         board[r][y] = Piece{};
 
-                    movePieceRaw(r, c, x, y);
+                    board[torow][tocol] = board[fromrow][fromcol];
+                    board[fromrow][fromcol] = Piece{};
 
                     if(!isKingCheck(turn))
                     {
