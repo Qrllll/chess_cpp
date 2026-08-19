@@ -2,11 +2,19 @@
 #include <fstream>
 
 #ifdef _WIN32
-#include <windows.h> // needed for SetConsoleOutputCP
+#include <windows.h> //enables the use of the unicode symbols
 #endif
 static void setupUnicodeConsole() {
 #ifdef _WIN32
     SetConsoleOutputCP(CP_UTF8);
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_FONT_INFOEX cfi = {};
+    cfi.cbSize = sizeof(cfi);
+    cfi.dwFontSize.Y = 18;
+    cfi.FontFamily = FF_DONTCARE;
+    cfi.FontWeight = FW_NORMAL;
+    wcscpy_s(cfi.FaceName, L"DejaVu Sans Mono");
+    SetCurrentConsoleFontEx(hOut, FALSE, &cfi);
 #endif
 }
 
@@ -47,25 +55,45 @@ Move moveHistory[MAX_MOVES]; // max 1k move history
 int moveCount = 0;
 int turn = 0;
 GameResult gameResult = GameResult::ONGOING; //default game state in a save file
+bool useSymbolBoard = true;
 
-string pieceChar(const Piece& p) // return the specific unicode chess symbol for each piece, used in printBoard()
+string pieceChar(const Piece& p) // returns either a unicode chess symbol or a plain letter for each piece, used in printBoard()
 {
-    if (p.color == Color::WHITE) // solid outline glyphs for white pieces
+    if (!useSymbolBoard) // plain-letter fallback (original representation)
+    {
+        char c;
         switch (p.type)
         {
-            default:                return " "; // empty square
-            case PieceType::PAWN:   return "\u265F"; // ♟
-            case PieceType::KNIGHT: return "\u265E"; // ♞
-            case PieceType::BISHOP: return "\u265D"; // ♝
-            case PieceType::ROOK:   return "\u265C"; // ♜
-            case PieceType::QUEEN:  return "\u265B"; // ♛
-            case PieceType::KING:   return "\u265A"; // ♚
-            
+        default: return " "; // empty spaces for no pieces
+        case PieceType::PAWN:   c = 'p'; break;
+        case PieceType::KNIGHT: c = 'n'; break;
+        case PieceType::BISHOP: c = 'b'; break;
+        case PieceType::ROOK:   c = 'r'; break;
+        case PieceType::QUEEN:  c = 'q'; break;
+        case PieceType::KING:   c = 'k'; break;
         }
 
-    switch (p.type) // solid filled glyphs for black pieces
-    {
+        if (p.color == Color::WHITE) // uppercase for white side pieces
+            c = toupper(c);
+
+        return string(1, c);
+    }
+
+    if (p.color == Color::WHITE) // solid filled glyphs for white pieces, since terminal is usually black background unless settings changed
+        switch (p.type)
+        {
         default:                return " "; // empty square
+        case PieceType::PAWN:   return "\u265F"; // ♟
+        case PieceType::KNIGHT: return "\u265E"; // ♞
+        case PieceType::BISHOP: return "\u265D"; // ♝
+        case PieceType::ROOK:   return "\u265C"; // ♜
+        case PieceType::QUEEN:  return "\u265B"; // ♛
+        case PieceType::KING:   return "\u265A"; // ♚
+        }
+
+    switch (p.type)
+    {
+        default:                return " ";
         case PieceType::PAWN:   return "\u2659"; // ♙
         case PieceType::KNIGHT: return "\u2658"; // ♘
         case PieceType::BISHOP: return "\u2657"; // ♗
@@ -389,18 +417,22 @@ void saveGame(const string& filename)
     cout << "Game saved to " << filename << " (" << moveCount << " moves).\n";
 }
 
-void loadGame(const string& filename)
+bool loadGame(const string& filename)
 {
     ifstream f(filename);
-    if (!f) 
+    if (!f) // returns error that it cant find the file
     {
         cout << "Could not open file: " << filename << "\n";
-        return;
-    } // returns error that it cant find the file
+        return false;
+    } 
  
     string header;
     getline(f, header);
-    if (header != "CHESSSAVE1") { cout << "Unrecognized save file format.\n"; return; } // returns error that its an unknown file type
+    if (header != "CHESSSAVE1") // returns error that its an unknown file type
+    {
+        cout << "Unrecognized save file format.\n"; 
+        return false; 
+    } 
  
     // reset to a fresh game before replaying
     for (int r = 0; r < 8; r++) 
@@ -455,22 +487,29 @@ void loadGame(const string& filename)
     }
  
     cout << "Loaded " << filename << ": " << nummoves << " moves replayed successfully.\n";
+    return true;
 }
 
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn)
 {
     if(turn % 2 == 0)
-        cout << "It is White's turn\n";
+        cout << "It is White's turn.\n";
     else
-        cout << "It is Blacks's turn\n";
+        cout << "It is Blacks's turn.\n";
 
-    cout << "Enter move (e.g. e2e4), 'history', 'stats', 'undo', 'save <file>', 'load <file>', 'resign', 'draw' or 'quit': ";
+    cout << "1) To switch between symbol and characters, type 'symbols'.\n2) To enter a move, type eg 'e2e3'.\n3) To show the game statistics, type 'stats'.\n4) To undo a move, type 'undo'.\n5) To save the current game, type'save <file>'.\n6) To resign, type 'resign'.\n7) To request a draw, type 'draw'.\n8)To quit the game, type 'quit'.\nEnter a command: ";
     string input;
     cin >> input;
 
     if (input == "quit" || input == "exit")
         return false;
-
+    if (input == "symbols") // toggle between unicode chess glyphs and plain letters on the board
+    {
+        useSymbolBoard = !useSymbolBoard;
+        cout << (useSymbolBoard ? "Symbol board enabled.\n" : "Plain-letter board enabled.\n");
+        printBoard();
+        return readMove(fromrow, fromcol, torow, tocol, turn);
+    }
     if (input == "history")
     {
         displayHistory();
@@ -490,12 +529,6 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
     {
         string filename; cin >> filename;
         saveGame(filename);
-        return readMove(fromrow, fromcol, torow, tocol, turn);
-    }
-    if (input == "load")
-    {
-        string filename; cin >> filename;
-        loadGame(filename);
         return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "resign")
@@ -1247,8 +1280,8 @@ void mainMenu()
             cout << "Filename: ";
             string filename; 
             cin >> filename;
-            loadGame(filename);
-            playGame();
+            if (loadGame(filename))
+                playGame();
         }
         else if (choice == "3")
         {

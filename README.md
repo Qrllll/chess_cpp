@@ -2,7 +2,7 @@ functions
 
 
 string pieceChar()
-takes a pieceType variable and converts it into a a chess piece symbol. used in printBoard() in order to display the pieces.
+takes a pieceType variable and returns either a unicode chess symbol or a plain letter for each piece, used in printBoard()
 
 
 choosePromotionPiece()
@@ -61,10 +61,11 @@ saves the current game
 
 
 
-void loadGame()
+bool loadGame()
 load a save game. a few checks is done before loading the game
-1) checks whether the file selected is available
-2) checks whether it is a valid format which has "CHESSSAVE1" as the header
+1) checks the game state
+2) checks whether the file selected is available
+3) checks whether it is a valid format which has "CHESSSAVE1" as the header
 if both checks pass, initialise the chess board and starts reading the file line by lineand checking whether the line contain a valid move such as "e2e3" or e7e8Q"
 if somewhere in the line contains a invalid move, it stop reading the file and returns where the malfunctioned line is located.
 
