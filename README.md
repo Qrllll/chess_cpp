@@ -169,6 +169,7 @@ void playGame()
 handles the ingame menu such as
 1) running the actual game
 2) allows the player to save game midgame or after the game ends
+if the loaded game has already ended, shows the statistics and return to the main menu.
 
 
 void mainMemu()

@@ -44,7 +44,7 @@ Move moveHistory[MAX_MOVES];
 int moveCount = 0;
 int turn = 0;
 
-char pieceChar(const Piece& p) // return the specific character for each pieces (also note to self "const" is just to make sure it dosent change the original object)
+char pieceChar(const Piece& p) // return the specific character for each pieces, used in printBoard()
 {
     char c;
     switch (p.type)
@@ -68,6 +68,28 @@ char pieceChar(const Piece& p) // return the specific character for each pieces 
         c = toupper(c);
 
     return c;
+}
+
+char promoToChar(PieceType t) //changes a PieceType variable to a char variable. its similar to pieceChar() function excludes the character for pawn, since this function is used for moveHistory()
+{
+    switch (t)
+    {
+    case PieceType::ROOK:   return 'r';
+    case PieceType::BISHOP: return 'b';
+    case PieceType::KNIGHT: return 'n';
+    default:                return 'q';
+    }
+}
+ 
+PieceType charToPromo(char c) //vice verse from the function above
+{
+    switch (toupper(c))
+    {
+    case 'R': return PieceType::ROOK;
+    case 'B': return PieceType::BISHOP;
+    case 'N': return PieceType::KNIGHT;
+    default:  return PieceType::QUEEN;
+    }
 }
 
 PieceType choosePromotionPiece() // shows the promt to allow to player to choose its pawn promotion piece./
@@ -227,6 +249,8 @@ void displayHistory()//display the move history eg '1. f3 e5 2. g4 Qh4#' for a s
         return; 
     }
 
+    cout << "\n----- Move History -----\n";
+
     for (int i = 0; i < moveCount; i++)
     {
         if (i % 2 == 0) // a single turn consists of displaying both white and black moves, hence 2 turns in total for a single line of turn notation
@@ -290,28 +314,6 @@ void displayStatistics()
     cout << "White material       : " << whiteMaterial << "\n";
     cout << "Black material       : " << blackMaterial << "\n";
     cout << "Material balance     : " << (whiteMaterial - blackMaterial) << " (positive favors White)\n";
-}
-
-char promoToChar(PieceType t) //changes a PieceType variable to a char variable
-{
-    switch (t)
-    {
-    case PieceType::ROOK:   return 'r';
-    case PieceType::BISHOP: return 'b';
-    case PieceType::KNIGHT: return 'n';
-    default:                return 'q';
-    }
-}
- 
-PieceType charToPromo(char c) //vice verse from the function above
-{
-    switch (toupper(c))
-    {
-    case 'R': return PieceType::ROOK;
-    case 'B': return PieceType::BISHOP;
-    case 'N': return PieceType::KNIGHT;
-    default:  return PieceType::QUEEN;
-    }
 }
 
 //function declaraction for undoMove() and loadGame()
@@ -416,11 +418,15 @@ void loadGame(const string& filename)
     }
  
     cout << "Loaded " << filename << ": " << nummoves << " moves replayed successfully.\n";
-    printBoard();
 }
 
-bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
+bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn)
 {
+    if(turn % 2 == 0)
+        cout << "It is White's turn\n";
+    else
+        cout << "It is Blacks's turn\n";
+
     cout << "Enter move (e.g. e2e4), 'history', 'stats', 'undo', 'save <file>', 'load <file>' or 'quit':";
     string input;
     cin >> input;
@@ -431,35 +437,35 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
     if (input == "history")
     {
         displayHistory();
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "stats")
     {
         displayStatistics();
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "undo")
     {
         undoMove();
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "save")
     {
         string filename; cin >> filename;
         saveGame(filename);
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "load")
     {
         string filename; cin >> filename;
         loadGame(filename);
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     
     if(input.size() != 4 || !checkRange(input[0], input[1], fromrow, fromcol) || !checkRange(input[2], input[3], torow, tocol))
     {
         cout << "Invalid input. Type a move (e.g. e2e4), a command, or 'quit'.\n";
-        return readMove(fromrow, fromcol, torow, tocol);
+        return readMove(fromrow, fromcol, torow, tocol, turn);
     }
 
     return true;
@@ -1070,13 +1076,12 @@ void playGame()
 {
     printBoard();
 
-    if (isCheckmateStalemate(turn))
+    if (isCheckmateStalemate(turn)) //if the loaded game has ended, instantly shows the statistic and return to the main page
     {
-        if (askYesNo("This game has already ended. Save it as a new file before returning to the menu?"))
+        if (askYesNo("This game has already ended. Want to see the move history and statistics of the game?"))
         {
-            cout << "Filename: ";
-            string filename; cin >> filename;
-            saveGame(filename);
+            displayHistory();
+            displayStatistics();
         }
         return;
     }
@@ -1084,9 +1089,9 @@ void playGame()
     while (true)
     {
         int fromrow, fromcol, torow, tocol;
-        if (!readMove(fromrow, fromcol, torow, tocol)) //if exiting program
+        if (!readMove(fromrow, fromcol, torow, tocol, turn)) //if exiting program
         {
-            if (askYesNo("Save before returning to the menu?"))
+            if (askYesNo("Save before returning to the menu?"))\
             {
                 cout << "Filename: ";
                 string filename; cin >> filename;
@@ -1102,8 +1107,9 @@ void playGame()
 
         if(isCheckmateStalemate(turn)) // check if the next player's turn is checkmate or stalemate, if yes then stop game
         {
-
+            displayHistory();
             displayStatistics();
+
             if (askYesNo("Save this game before returning to the menu?"))
             {
                 cout << "Filename: ";
