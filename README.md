@@ -57,6 +57,7 @@ void saveGame()
 saves the current game 
 1) the save files contains a header "CHESSSAVE1" as a identifier for the correct file type
 2) each line contains a move such as "e2e3". if there was a promotion, adds the promotion piece to the end eg. "e7e8Q".
+3) at the final line, shows whether the file is an ongoing game, resigned game or a draw game.
 
 
 
