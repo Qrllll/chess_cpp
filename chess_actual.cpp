@@ -38,6 +38,7 @@ struct Move // what a move contains
     bool isCastleQueenside = false;
     bool isPawnDoubleStep = false;     // enables en passant on the *next* move
     bool givesCheck = false;
+    bool givesCheckmate = false;
 };
 
 Piece board[8][8]; // the array for the pieces in the board
@@ -241,6 +242,11 @@ string moveToNotation(const Move& m) // generates the formal chess notation such
         result += '=';
         result += promoLetter;
     }
+
+    if (m.givesCheckmate) // checkmate takes priority over a normal check symbol
+        result += '#';
+    else if (m.givesCheck)
+        result += '+';
 
     return result;
 }
@@ -1071,6 +1077,8 @@ bool isCheckmateStalemate(int turn)
         cout << "Stalemate. The game is a draw.\n";
         return true;
     }
+
+    moveHistory[moveCount - 1].givesCheckmate = true;
 
     if (validcolor == 0)
     {
