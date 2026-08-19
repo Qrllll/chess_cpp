@@ -35,6 +35,7 @@ struct Move // what a move contains
     bool isCastleKingside = false;
     bool isCastleQueenside = false;
     bool isPawnDoubleStep = false;     // enables en passant on the *next* move
+    bool givesCheck = false;
 };
 
 Piece board[8][8]; // the array for the pieces in the board
@@ -236,6 +237,61 @@ void displayHistory()//display the move history eg '1. f3 e5 2. g4 Qh4#' for a s
     if (moveCount % 2 == 1) cout << "\n";
 }
 
+int pieceValue(PieceType t) // standard point values for each piece captured, used in the statistic display
+{
+    switch (t)
+    {
+    case PieceType::PAWN:   return 1;
+    case PieceType::KNIGHT: return 3;
+    case PieceType::BISHOP: return 3;
+    case PieceType::ROOK:   return 5;
+    case PieceType::QUEEN:  return 9;
+    default:                return 0; // king and empty has no value
+    }
+}
+
+void displayStatistics()
+{
+    int whiteCaptures = 0, blackCaptures = 0;
+    int castles = 0, promotions = 0, enPassantCaptures = 0, checksGiven = 0;
+
+    for (int i = 0; i < moveCount; i++)
+    {
+        const Move& m = moveHistory[i];
+        bool isCapture = (m.capturedPiece.type != PieceType::EMPTY) || m.isEnPassantCapture;
+        if (isCapture)
+        {
+            if (m.movedPiece.color == Color::WHITE) whiteCaptures++;
+            else blackCaptures++;
+        }
+        if (m.isCastleKingside || m.isCastleQueenside) castles++;
+        if (m.promotedTo != PieceType::EMPTY) promotions++;
+        if (m.isEnPassantCapture) enPassantCaptures++;
+        if (m.givesCheck) checksGiven++;
+    }
+
+    int whiteMaterial = 0, blackMaterial = 0;
+    for (int r = 0; r < 8; r++)
+        for (int c = 0; c < 8; c++)
+        {
+            int value = pieceValue(board[r][c].type);
+            if (board[r][c].color == Color::WHITE) whiteMaterial += value;
+            else if (board[r][c].color == Color::BLACK) blackMaterial += value;
+        }
+
+    cout << "\n----- Game Statistics -----\n";
+    cout << "Total moves played   : " << moveCount << "\n";
+    cout << "White captures       : " << whiteCaptures << "\n";
+    cout << "Black captures       : " << blackCaptures << "\n";
+    cout << "Castles performed    : " << castles << "\n";
+    cout << "Pawn promotions      : " << promotions << "\n";
+    cout << "En passant captures  : " << enPassantCaptures << "\n";
+    cout << "Checks given         : " << checksGiven << "\n";
+    cout << "White material       : " << whiteMaterial << "\n";
+    cout << "Black material       : " << blackMaterial << "\n";
+    cout << "Material balance     : " << (whiteMaterial - blackMaterial) << " (positive favors White)\n";
+}
+
 char promoToChar(PieceType t) //changes a PieceType variable to a char variable
 {
     switch (t)
@@ -365,7 +421,7 @@ void loadGame(const string& filename)
 
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
-    cout << "Enter move (e.g. e2e4), 'history', 'undo', 'save <file>', 'load <file>' or 'quit':";
+    cout << "Enter move (e.g. e2e4), 'history', 'stats', 'undo', 'save <file>', 'load <file>' or 'quit':";
     string input;
     cin >> input;
 
@@ -375,6 +431,11 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
     if (input == "history")
     {
         displayHistory();
+        return readMove(fromrow, fromcol, torow, tocol);
+    }
+    if (input == "stats")
+    {
+        displayStatistics();
         return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "undo")
@@ -874,8 +935,8 @@ bool isCheckmateStalemate(int turn)
                     if(isEnPassant)
                         board[r][y] = Piece{}; // clear the pawn captured via en passant
 
-                    board[torow][tocol] = board[fromrow][fromcol];
-                    board[fromrow][fromcol] = Piece{};
+                    board[x][y] = board[r][c];
+                    board[r][c] = Piece{};
 
                     if(!isKingCheck(turn)) //succeed in escaping check
                     {
@@ -907,8 +968,8 @@ bool isCheckmateStalemate(int turn)
                     if(isEnPassant)
                         board[r][y] = Piece{};
 
-                    board[torow][tocol] = board[fromrow][fromcol];
-                    board[fromrow][fromcol] = Piece{};
+                    board[x][y] = board[r][c];
+                    board[r][c] = Piece{};
 
                     if(!isKingCheck(turn))
                     {
@@ -991,6 +1052,9 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
         }
  
     turn++;
+
+    if (isKingCheck(turn)) // checks if the player's move had check the opponents, hence added after turn++
+        moveHistory[moveCount - 1].givesCheck = true;
     return true;
 }
 
