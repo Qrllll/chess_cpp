@@ -48,24 +48,30 @@ int moveCount = 0;
 int turn = 0;
 GameResult gameResult = GameResult::ONGOING; //default game state in a save file
 
-char pieceChar(const Piece& p) // return the specific character for each pieces, used in printBoard()
+string pieceChar(const Piece& p) // return the specific unicode chess symbol for each piece, used in printBoard()
 {
-    char c;
-    switch (p.type)
+    if (p.color == Color::WHITE) // solid outline glyphs for white pieces
+        switch (p.type)
+        {
+        default:                return " "; // empty square
+        case PieceType::PAWN:   return "\u2659"; // ♙
+        case PieceType::KNIGHT: return "\u2658"; // ♘
+        case PieceType::BISHOP: return "\u2657"; // ♗
+        case PieceType::ROOK:   return "\u2656"; // ♖
+        case PieceType::QUEEN:  return "\u2655"; // ♕
+        case PieceType::KING:   return "\u2654"; // ♔
+        }
+
+    switch (p.type) // solid filled glyphs for black pieces
     {
-    default: return ' '; // empty spaces for no pieces
-    case PieceType::PAWN:   c = 'p'; break;
-    case PieceType::KNIGHT: c = 'n'; break;
-    case PieceType::BISHOP: c = 'b'; break;
-    case PieceType::ROOK:   c = 'r'; break;
-    case PieceType::QUEEN:  c = 'q'; break;
-    case PieceType::KING:   c = 'k'; break;
+    default:                return " "; // empty square
+    case PieceType::PAWN:   return "\u265F"; // ♟
+    case PieceType::KNIGHT: return "\u265E"; // ♞
+    case PieceType::BISHOP: return "\u265D"; // ♝
+    case PieceType::ROOK:   return "\u265C"; // ♜
+    case PieceType::QUEEN:  return "\u265B"; // ♛
+    case PieceType::KING:   return "\u265A"; // ♚
     }
-
-    if (p.color == Color::WHITE) // uppercase for white side pieces
-        c = toupper(c);
-
-    return c;
 }
 
 char promoToChar(PieceType t) //changes a PieceType variable to a char variable. its similar to pieceChar() function excludes the character for pawn, since this function is used for moveHistory()

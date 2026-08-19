@@ -1,8 +1,8 @@
 functions
 
 
-char pieceChar()
-takes a pieceType variable and converts it into a char. used in printBoard() in order to display the pieces.
+string pieceChar()
+takes a pieceType variable and converts it into a a chess piece symbol. used in printBoard() in order to display the pieces.
 
 
 choosePromotionPiece()
