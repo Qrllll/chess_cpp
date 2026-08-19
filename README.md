@@ -54,6 +54,22 @@ undo the move that a player made.
 
 
 void saveGame()
+saves the current game 
+1) the save files contains a header "CHESSSAVE1" as a identifier for the correct file type
+2) each line contains a move such as "e2e3". if there was a promotion, adds the promotion piece to the end eg. "e7e8Q".
+
+
+
+void loadGame()
+load a save game. a few checks is done before loading the game
+1) checks whether the file selected is available
+2) checks whether it is a valid format which has "CHESSSAVE1" as the header
+if both checks pass, initialise the chess board and starts reading the file line by lineand checking whether the line contain a valid move such as "e2e3" or e7e8Q"
+if somewhere in the line contains a invalid move, it stop reading the file and returns where the malfunctioned line is located.
+
+
+void readMove()
+the main function that reads the input from the player. has a few functions stated inside the function.
 
 
 movePieceRaw()
