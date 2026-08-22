@@ -368,6 +368,7 @@ void undoMove()
 {
     if (moveCount == 0) 
     {
+        printBoard();
         cout << "Nothing to undo.\n";
         return;
     }
@@ -490,7 +491,7 @@ bool loadGame(const string& filename)
     return true;
 }
 
-bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn)
+bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
     if(turn % 2 == 0)
         cout << "It is White's turn.\n";
@@ -507,33 +508,35 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
         useSymbolBoard = !useSymbolBoard;
         cout << (useSymbolBoard ? "Symbol board enabled.\n" : "Plain-letter board enabled.\n");
         printBoard();
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "history")
     {
         printBoard();
         displayHistory();
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "stats")
     {
         printBoard();
         displayStatistics();
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "undo")
     {
         undoMove();
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "save")
     {
         string filename; cin >> filename;
         saveGame(filename);
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        printBoard();
+        return readMove(fromrow, fromcol, torow, tocol);
     }
     if (input == "resign")
     {
+        printBoard();
         if((turn % 2 == 0))
         {
             gameResult = GameResult::WHITE_RESIGNED;
@@ -562,7 +565,7 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
             else
             {
                 cout << "Draw declined.\n";
-                return readMove(fromrow, fromcol, torow, tocol, turn);  
+                return readMove(fromrow, fromcol, torow, tocol);  
             }
         }
         else
@@ -576,15 +579,16 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
             else
             {
                 cout << "Draw declined.\n";
-                return readMove(fromrow, fromcol, torow, tocol, turn);  
+                return readMove(fromrow, fromcol, torow, tocol);  
             }
         }
     }
     
     if(input.size() != 4 || !checkRange(input[0], input[1], fromrow, fromcol) || !checkRange(input[2], input[3], torow, tocol))
     {
-        cout << "Invalid input. Type a move (e.g. e2e4), a command, or 'quit'.\n";
-        return readMove(fromrow, fromcol, torow, tocol, turn);
+        printBoard();
+        cout << "Invalid input.\n";
+        return readMove(fromrow, fromcol, torow, tocol);
     }
 
     return true;
@@ -1206,7 +1210,7 @@ void playGame()
     while (true)
     {
         int fromrow, fromcol, torow, tocol;
-        if (!readMove(fromrow, fromcol, torow, tocol, turn)) //if exiting program
+        if (!readMove(fromrow, fromcol, torow, tocol)) //if exiting program
         {
             if (askYesNo("Save before returning to the menu?"))\
             {
