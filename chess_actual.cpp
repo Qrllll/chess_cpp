@@ -497,10 +497,9 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
     else
         cout << "It is Blacks's turn.\n";
 
-    cout << "1) To switch between symbol and characters, type 'symbols'.\n2) To enter a move, type eg 'e2e3'.\n3) To show the game statistics, type 'stats'.\n4) To undo a move, type 'undo'.\n5) To save the current game, type'save <file>'.\n6) To resign, type 'resign'.\n7) To request a draw, type 'draw'.\n8)To quit the game, type 'quit'.\nEnter a command: ";
+    cout << "1) 'symbols' \t- Switch between symbol and characters on the board.\n2) 'e2e3' \t- To enter a move.\n3) 'stats' \t- Show the game statistics.\n4) 'undo' \t- Undo a move.\n5) 'save <file>'- Save the current game.\n6) 'resign' \t- Resign from your opponent.\n7) 'draw' \t- Request a draw with your opponent.\n8) 'quit' \t- Quit the game.\nEnter a command: ";
     string input;
     cin >> input;
-
     if (input == "quit" || input == "exit")
         return false;
     if (input == "symbols") // toggle between unicode chess glyphs and plain letters on the board
@@ -512,11 +511,13 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol, const int turn
     }
     if (input == "history")
     {
+        printBoard();
         displayHistory();
         return readMove(fromrow, fromcol, torow, tocol, turn);
     }
     if (input == "stats")
     {
+        printBoard();
         displayStatistics();
         return readMove(fromrow, fromcol, torow, tocol, turn);
     }
