@@ -26,7 +26,7 @@ converts a integer coordinate such as "07" back to "a8"
 
 
 string moveToNotation() <br />
-generates the formal chess notation sch as "Nf3", "e4", "e8=Q" to be used in displayHistory()
+generates the formal chess notation sch as "Nf3", "e4" and "e8=Q" to be used in displayHistory()
 
 
 void displayHistory() <br />
