@@ -1,11 +1,11 @@
 functions
 
 
-string pieceChar()
+string pieceChar()__
 takes a pieceType variable and returns either a unicode chess symbol or a plain letter for each piece, used in printBoard()
 
 
-choosePromotionPiece()
+choosePromotionPiece()__
 allows the player to choose the pawn promotion piece.
 
 
