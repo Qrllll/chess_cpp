@@ -235,7 +235,7 @@ string moveToNotation(const Move& m) // generates the formal chess notation such
 {
     if (m.isCastleKingside)  //number of 0s represent the number of sqaures the rook had moved
         return "0-0";
-    if (m.isCastleKingside)
+    if (m.isCastleQueenside)
         return "0-0-0";
 
     string result;
