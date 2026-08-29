@@ -479,7 +479,7 @@ bool loadGame(const string& filename)
         else
             forcedPromotion = PieceType::EMPTY;
  
-        if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion)) //safety check if one of the movse cant be done
+        if (!tryMakeMove(fromrow, fromcol, torow, tocol, forcedPromotion)) //runs the moves, and additionally, check if one of the movse cant be done
         {
             cout << "Warning: move '" << line << "' from save file is illegal. Stopping replay.\n";
             break;
