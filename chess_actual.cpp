@@ -1,8 +1,8 @@
 #include <iostream>
 #include <fstream>
 
-#ifdef _WIN32
-#include <windows.h> //enables the use of the unicode symbols
+#ifdef _WIN32 //enables the use of the unicode symbols
+#include <windows.h>
 #endif
 static void setupUnicodeConsole() {
 #ifdef _WIN32
@@ -18,33 +18,32 @@ static void setupUnicodeConsole() {
 #endif
 }
 
-
 using namespace std;
 
-enum class PieceType { EMPTY, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING }; //initialize the types of pieces
+enum class PieceType { EMPTY, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING }; //initialise the types of pieces
 enum class Color { NONE, WHITE, BLACK }; //pieces color
-enum class GameResult { ONGOING, WHITE_RESIGNED, BLACK_RESIGNED, DRAW_AGREED }; //for the save file
+enum class GameResult { ONGOING, WHITE_RESIGNED, BLACK_RESIGNED, DRAW_AGREED }; //the game status for the save file
 
 
 struct Piece // what a piece is made up of
 {
-    //default states
+    //default states of a piece
     PieceType type = PieceType::EMPTY;
     Color color = Color::NONE;
     bool hasMoved = false;
 };
 
-struct Move // what a move contains
+struct Move // information about a single move
 {
-    int fromrow, fromcol, torow, tocol;
-    Piece movedPiece;
-    Piece capturedPiece = {PieceType::EMPTY, Color::NONE};
-    PieceType promotedTo = PieceType::EMPTY;
+    int fromrow, fromcol, torow, tocol; //the start and end position of the piece
+    Piece movedPiece; //what piece had been moved
+    Piece capturedPiece = {PieceType::EMPTY, Color::NONE}; //defaults to empty, if there is a piece captured, applyMove() will update it
+    PieceType promotedTo = PieceType::EMPTY; //also defaults to empty, will be updated by loadGame() if there is a promotion happening, which prevents the prompt of asking the user for promotion piece
 
     bool isEnPassantCapture = false;   // captured pawn wasn't on the 'to' square
     bool isCastleKingside = false;
     bool isCastleQueenside = false;
-    bool isPawnDoubleStep = false;     // enables en passant on the *next* move
+    bool isPawnDoubleStep = false;     // enables en passant on the next move
     bool givesCheck = false;
     bool givesCheckmate = false;
 };
@@ -104,7 +103,7 @@ string pieceChar(const Piece& p) // returns either a unicode chess symbol or a p
     }
 }
 
-char promoToChar(PieceType t) //changes a PieceType variable to a char variable. its similar to pieceChar() function excludes the character for pawn, since this function is used for moveHistory()
+char promoToChar(PieceType t) //changes a PieceType variable to a char variable. its similar to pieceChar() function, but excludes the character for pawn, since this function is used for moveHistory()
 {
     switch (t)
     {
@@ -115,7 +114,7 @@ char promoToChar(PieceType t) //changes a PieceType variable to a char variable.
     }
 }
  
-PieceType charToPromo(char c) //vice verse from the function above
+PieceType charToPromo(char c) //vice versa from the function above
 {
     switch (toupper(c))
     {
@@ -126,7 +125,7 @@ PieceType charToPromo(char c) //vice verse from the function above
     }
 }
 
-PieceType choosePromotionPiece() // shows the promt to allow to player to choose its pawn promotion piece./
+PieceType choosePromotionPiece() // shows the prompt to allow to player to choose its pawn promotion piece.
 {
     cout << "Pawn promotion! Choose a piece (Q/R/B/N): ";
     char choice;
@@ -224,7 +223,7 @@ bool checkRange(char file, char rank, int& outrow, int& outcol) // check whether
     return true;
 }
 
-string squareName(int row, int col) // converts back the integer coordinate such as 07 back to a8
+string squareName(int row, int col) // converts back the integer coordinate such as 07 back to a8, used mainly in moveToNotation()
 {
     string s;
     s += char('a' + col);
@@ -323,8 +322,7 @@ int pieceValue(PieceType t) // standard point values for each piece captured, us
 
 void displayStatistics()
 {
-    int whiteCaptures = 0, blackCaptures = 0;
-    int castles = 0, promotions = 0, enPassantCaptures = 0, checksGiven = 0;
+    int whiteCaptures = 0, blackCaptures = 0, castles = 0, promotions = 0, enPassantCaptures = 0, checksGiven = 0;
 
     for (int i = 0; i < moveCount; i++)
     {
@@ -342,17 +340,15 @@ void displayStatistics()
     }
 
     int whiteMaterial = 0, blackMaterial = 0;
-    for (int r = 0; r < 8; r++)
-        for (int c = 0; c < 8; c++)
-        {
-            int value = pieceValue(board[r][c].type);
-            if (board[r][c].color == Color::WHITE) whiteMaterial += value;
-            else if (board[r][c].color == Color::BLACK) blackMaterial += value;
-        }
+    for (int r = 0; r < 8; r++) for (int c = 0; c < 8; c++)
+    {
+        int value = pieceValue(board[r][c].type);
+        if (board[r][c].color == Color::WHITE) whiteMaterial += value;
+        else if (board[r][c].color == Color::BLACK) blackMaterial += value;
+    }
 
     cout << "\n----- Game Statistics -----\n";
-    if (!groupName.empty())
-        cout << "Group name           : " << groupName << "\n";
+    if (!groupName.empty()) cout << "Group name           : " << groupName << "\n";
     cout << "Total moves played   : " << moveCount << "\n";
     cout << "White captures       : " << whiteCaptures << "\n";
     cout << "Black captures       : " << blackCaptures << "\n";
@@ -381,9 +377,10 @@ void undoMove()
     for (int i = 0; i < targetCount; i++) 
         replayMoves[i] = moveHistory[i]; // get all the moves done up until the previous last move
  
+    //re-setup the board
     for (int r = 0; r < 8; r++) 
         for (int c = 0; c < 8; c++) 
-            board[r][c] = Piece{}; //re-setup the board
+            board[r][c] = Piece{};
             setupStartPos();
             moveCount = 0;
             turn = 0;
@@ -400,7 +397,7 @@ void saveGame(const string& filename)
     ofstream f(filename);
     if (!f) { cout << "Could not open file for writing: " << filename << "\n"; return; }
  
-    f << "CHESSSAVE1\n"; //as the file format
+    f << "CHESSSAVE1\n"; //use this header as the file format
     if (!groupName.empty()) // checks if theres group name, if so then save it
         f << "GROUP:" << groupName << "\n";
     for (int i = 0; i < moveCount; i++)
@@ -417,7 +414,7 @@ void saveGame(const string& filename)
     case GameResult::WHITE_RESIGNED: f << "RESULT:WHITE_RESIGNED\n"; break;
     case GameResult::BLACK_RESIGNED: f << "RESULT:BLACK_RESIGNED\n"; break;
     case GameResult::DRAW_AGREED:    f << "RESULT:DRAW_AGREED\n";    break;
-    default: break; // ONGOING: nothing to write
+    default: break; // basically ONGOING as gameResult was defaulted to it
     }
 
     cout << "Game saved to " << filename << " (" << moveCount << " moves).\n";
@@ -440,7 +437,7 @@ bool loadGame(const string& filename)
         return false; 
     } 
  
-    // reset to a fresh game before replaying
+    // reset to a fresh new game before replaying
     for (int r = 0; r < 8; r++) 
         for (int c = 0; c < 8; c++) 
             board[r][c] = Piece{};
@@ -452,9 +449,13 @@ bool loadGame(const string& filename)
  
     string line;
     int nummoves = 0;
-    while (getline(f, line)) //reads every line of the file to verify it is all valid
+    /*
+    this loop runs to reads every line of the file to verify it is all valid, 
+    which ends after getline returns false when there are no lines left, or there is an malformed line, which the replay ends there and shows the error.
+    */
+    while (getline(f, line)) 
     {
-        if (line.empty()) 
+        if (line.empty()) //reruns the loop to read next line
             continue;
 
         if (line.rfind("GROUP:", 0) == 0) //.rfind = read from the reverse, which is the bottom of the file. if found, it will return 0
@@ -515,7 +516,7 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
     cin >> input;
     if (input == "quit" || input == "exit")
         return false;
-    if (input == "symbols") // toggle between unicode chess glyphs and plain letters on the board
+    if (input == "symbols") // toggle between chess symbols and plain letters on the board
     {
         useSymbolBoard = !useSymbolBoard;
         cout << (useSymbolBoard ? "Symbol board enabled.\n" : "Plain-letter board enabled.\n");
@@ -606,14 +607,14 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
     return true;
 }
 
-void movePieceRaw(int fromrow, int fromcol, int torow, int tocol)
+void movePieceRaw(int fromrow, int fromcol, int torow, int tocol) // purely for moving a piece and making its status "moved", used in applyMove()
 {
     board[torow][tocol] = board[fromrow][fromcol];
-    board[torow][tocol].hasMoved = true;
     board[fromrow][fromcol] = Piece{};
+    board[torow][tocol].hasMoved = true;
 }
 
-void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY) // used in main function to move the pieces, and store the move history on each turn
+void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY) // used in tryMakeMove() to move the pieces, and store the move history on each turn
 {
     Piece frompiece = board[fromrow][fromcol];
     Piece destpiece = board[torow][tocol];
@@ -657,7 +658,7 @@ void applyMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedP
     if (frompiece.type == PieceType::PAWN && ((frompiece.color == Color::WHITE && torow == 7) || (frompiece.color == Color::BLACK && torow == 0))) // if it is white pawn, promotion happens at top row, bottom row for black
     {
         PieceType chosen;
-        if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without asking
+        if((forcedPromotion != PieceType::EMPTY)) //if it is from a save file, instanly promotes the piece without prompting 
             chosen = forcedPromotion;
         else
             chosen = choosePromotionPiece();
@@ -705,7 +706,7 @@ bool isPawnMove(Color color, int fromrow, int fromcol, int torow, int tocol)
 
     if(color == Color::WHITE)
     {
-        direction = 1; // only moves upward
+        direction = 1; // only moves upward for white
         startrow = 1;
     }
     else
@@ -717,7 +718,7 @@ bool isPawnMove(Color color, int fromrow, int fromcol, int torow, int tocol)
     int dc = tocol - fromcol;
     int dr = torow - fromrow;
 
-    if(dc == 0) //move without capturing
+    if(dc == 0) //normal forward move
     {
         if (dr == direction && board[torow][tocol].type == PieceType::EMPTY) //move 1 step
             return true;
@@ -735,7 +736,7 @@ bool isPawnMove(Color color, int fromrow, int fromcol, int torow, int tocol)
             return true;
     }
 
-    return isEnPassant(color, fromrow, fromcol, torow, tocol);
+    return isEnPassant(color, fromrow, fromcol, torow, tocol); // en passant move
 
     return false;
 }
@@ -745,7 +746,7 @@ bool isKnightMove(int fromrow, int fromcol, int torow, int tocol)
     int dc = abs(tocol - fromcol);
     int dr = abs(torow - fromrow);
 
-    return (dc == 1 && dr == 2) || (dc == 2 && dr == 1);
+    return (dc == 1 && dr == 2) || (dc == 2 && dr == 1); // L shaped move
 }
 
 bool isBishopMove(int fromrow, int fromcol, int torow, int tocol)
@@ -762,7 +763,7 @@ bool isBishopMove(int fromrow, int fromcol, int torow, int tocol)
     if (dr > 0) steprow = 1;
     else steprow = -1;
 
-    while (abs(steprow) != abs(dr)) // check whether there are pieces blocking the move
+    while (abs(steprow) != abs(dr)) // check whether there are pieces blocking the move by running a loop to check every squares inbetween
     {
         if (board[fromrow + steprow][fromcol + stepcol].type != PieceType::EMPTY)
             return false;
@@ -790,7 +791,7 @@ bool isRookMove(int fromrow, int fromcol, int torow, int tocol)
 
     if (dr == 0)
     {
-        while (abs(step) != abs(dc)) // check whether there are pieces blocking the move
+        while (abs(step) != abs(dc)) // check whether there are pieces blocking the move, same logic as the bishop
         {
             if (board[fromrow][fromcol + step].type != PieceType::EMPTY)
                 return false;
@@ -817,7 +818,7 @@ bool isRookMove(int fromrow, int fromcol, int torow, int tocol)
 
 bool isQueenMove(int fromrow, int fromcol, int torow, int tocol)
 {
-    return isBishopMove(fromrow, fromcol, torow, tocol) || isRookMove(fromrow, fromcol, torow, tocol);
+    return isBishopMove(fromrow, fromcol, torow, tocol) || isRookMove(fromrow, fromcol, torow, tocol); //combination of bishop + rook
 }
 
 bool isKingMove(int fromrow, int fromcol, int torow, int tocol)
@@ -880,7 +881,7 @@ bool isCastling(const Piece& piece, int fromrow, int fromcol, int torow, int toc
     return true;
 }
 
-bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn)
+bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, int tocol, int turn) // the main function that compiles all the piece movement rulesets into a single function
 {
     if (fromrow == torow && fromcol == tocol) //moving to the same place
         return false;
@@ -914,7 +915,7 @@ bool isLegalPieceMove(const Piece& piece, int fromrow, int fromcol, int torow, i
     }
 }
 
-bool isSquareAttacked(int torow, int tocol,int turn)
+bool isSquareAttacked(int torow, int tocol,int turn) // scans the entire board to check if any opponent piece on the board could attack a certain square on the board.
 {
     Color attackerColor;
 
@@ -986,7 +987,7 @@ bool isSquareAttacked(int torow, int tocol,int turn)
     return false;
 }
 
-bool isColorMove(const Piece& piece, int& turn)
+bool isColorMove(const Piece& piece, int& turn) //checks whether the piece moved by the player is the player's piece
 {
     int validcolor = turn % 2; // 0 = white's turn, 1 = black's turn
 
@@ -1012,7 +1013,7 @@ bool isColorMove(const Piece& piece, int& turn)
     }
 }
 
-bool isKingCheck(int turn)
+bool isKingCheck(int turn) //checks whether the current player's king is under check.
 {
     int validcolor = turn % 2; // 0 = white's turn, 1 = black's turn
     int kingrow, kingcol;
@@ -1058,7 +1059,7 @@ bool isKingCheck(int turn)
     return false;
 }
 
-bool isCheckmateStalemate(int turn)
+bool isCheckmateStalemate(int turn) //checks whether the player is checkmated or in stalemate by running simulation moves.
 {
     int validcolor = turn % 2; // 0 = white's turn, 1 = black's turn
 
@@ -1076,7 +1077,7 @@ bool isCheckmateStalemate(int turn)
                     if(isEnPassant)
                         board[r][y] = Piece{}; // clear the pawn captured via en passant
 
-                    board[x][y] = board[r][c];
+                    board[x][y] = board[r][c]; // dosent use the movePieceRaw() as it will flag the simulation piece as "moved"
                     board[r][c] = Piece{};
 
                     if(!isKingCheck(turn)) //succeed in escaping check
@@ -1135,7 +1136,7 @@ bool isCheckmateStalemate(int turn)
         return true;
     }
 
-    moveHistory[moveCount - 1].givesCheckmate = true;
+    moveHistory[moveCount - 1].givesCheckmate = true; //sets the previous move done by the previous player as a checkmate move
 
     if (validcolor == 0)
     {
@@ -1149,7 +1150,7 @@ bool isCheckmateStalemate(int turn)
     }
 }
 
-bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY)
+bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType forcedPromotion = PieceType::EMPTY) //the main function for handling the player's move.
 {
     Piece frompiece = board[fromrow][fromcol];
     Piece destpiece = board[torow][tocol];
@@ -1167,12 +1168,12 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
             return false;
         }
 
-        if (!isColorMove(frompiece, turn))
+        if (!isColorMove(frompiece, turn)) 
         {
             return false;
         }
  
-    int oldMoveCount = moveCount;
+    int oldMoveCount = moveCount; //stores the moveCount in case the the move that the player made still leaves the king in check, which the move will be undo'd
     applyMove(fromrow, fromcol, torow, tocol, forcedPromotion);
  
     if(isKingCheck(turn)) // check if the king is still in check after the current player's move
@@ -1204,7 +1205,7 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
 void playGame()
 {
     printBoard();
-
+    // checks the game state first, as it could be from a loaded game where the game has already ended
     if (isCheckmateStalemate(turn) || gameResult != GameResult::ONGOING)
     {
         if (gameResult == GameResult::WHITE_RESIGNED) cout << "This game already ended: White resigned.\n";
