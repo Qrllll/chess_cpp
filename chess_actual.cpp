@@ -1290,7 +1290,7 @@ void mainMenu()
             moveCount = 0;
             turn = 0;
             gameResult = GameResult::ONGOING;
-            cout << "Group name: ";
+            cout << "Group name(single word, no spaces): ";
             cin >> groupName;
             playGame();
         }
