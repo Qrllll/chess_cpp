@@ -1,6 +1,4 @@
 CHESSSAVE1
-GROUP:zhiyongfoundthisbug
-f2f3
-e7e9
-g2g4
-d8h4
+GROUP:testing and testing
+e2e3
+RESULT:BLACK_RESIGNED

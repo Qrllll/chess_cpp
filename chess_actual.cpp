@@ -1291,8 +1291,9 @@ void mainMenu()
             moveCount = 0;
             turn = 0;
             gameResult = GameResult::ONGOING;
-            cout << "Group name(single word, no spaces): ";
-            cin >> groupName;
+            cout << "Enter a group name for this game: ";
+            cin.ignore(150, '\n');
+            getline(cin, groupName);
             playGame();
         }
         else if (choice == "2")
