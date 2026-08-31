@@ -55,6 +55,7 @@ Move moveHistory[MAX_MOVES]; // max 1k move history
 int moveCount = 0;
 int turn = 0;
 GameResult gameResult = GameResult::ONGOING; //default game state in a save file
+string groupName = ""; // the group/team name for this game session
 bool useSymbolBoard = true;
 
 string pieceChar(const Piece& p) // returns either a unicode chess symbol or a plain letter for each piece, used in printBoard()
@@ -350,6 +351,8 @@ void displayStatistics()
         }
 
     cout << "\n----- Game Statistics -----\n";
+    if (!groupName.empty())
+        cout << "Group name           : " << groupName << "\n";
     cout << "Total moves played   : " << moveCount << "\n";
     cout << "White captures       : " << whiteCaptures << "\n";
     cout << "Black captures       : " << blackCaptures << "\n";
@@ -398,6 +401,8 @@ void saveGame(const string& filename)
     if (!f) { cout << "Could not open file for writing: " << filename << "\n"; return; }
  
     f << "CHESSSAVE1\n"; //as the file format
+    if (!groupName.empty()) // checks if theres group name, if so then save it
+        f << "GROUP:" << groupName << "\n";
     for (int i = 0; i < moveCount; i++)
     {
         const Move& m = moveHistory[i]; //saves a move by outputting eg "e2e3" or "e7e8Q" if there is a promotion
@@ -443,6 +448,7 @@ bool loadGame(const string& filename)
             moveCount = 0;
             turn = 0;
             gameResult = GameResult::ONGOING;
+            groupName = "";
  
     string line;
     int nummoves = 0;
@@ -451,9 +457,15 @@ bool loadGame(const string& filename)
         if (line.empty()) 
             continue;
 
-        if (line.rfind("RESULT:", 0) == 0) //.rfind = read from the reverse, which is the bottom of the file, and find the string "RESULT:". if found, then return 0
+        if (line.rfind("GROUP:", 0) == 0) //.rfind = read from the reverse, which is the bottom of the file. if found, it will return 0
         {
-            string resultCode = line.substr(7); // read the line starting from the position 7(note: first position is 0).
+            groupName = line.substr(6);  // read the line starting from the position 6(note: first position is 0).
+            continue;
+        }
+
+        if (line.rfind("RESULT:", 0) == 0)
+        {
+            string resultCode = line.substr(7);
             if (resultCode == "WHITE_RESIGNED") gameResult = GameResult::WHITE_RESIGNED;
             else if (resultCode == "BLACK_RESIGNED") gameResult = GameResult::BLACK_RESIGNED;
             else if (resultCode == "DRAW_AGREED") gameResult = GameResult::DRAW_AGREED;
@@ -1278,6 +1290,8 @@ void mainMenu()
             moveCount = 0;
             turn = 0;
             gameResult = GameResult::ONGOING;
+            cout << "Group name: ";
+            cin >> groupName;
             playGame();
         }
         else if (choice == "2")
