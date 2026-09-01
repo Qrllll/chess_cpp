@@ -1168,18 +1168,22 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
  
     if (frompiece.type == PieceType::EMPTY)
         {
+            printBoard();
             cout << "There is no piece on that square.\n";
             return false;
         }
 
         if (!isLegalPieceMove(frompiece, fromrow, fromcol, torow, tocol, turn))
         {
+            printBoard();
             cout << "That is not a legal move.\n";
             return false;
         }
 
         if (!isColorMove(frompiece, turn)) 
         {
+            printBoard();
+            cout << "That is not your piece.";
             return false;
         }
  
