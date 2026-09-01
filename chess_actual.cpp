@@ -511,7 +511,7 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
     else
         cout << "It is Blacks's turn.\n";
 
-    cout << "1) 'symbols' \t- Switch between symbol and characters on the board.\n2) 'e2e3' \t- To enter a move.\n3) 'stats' \t- Show the game statistics.\n4) 'undo' \t- Undo a move.\n5) 'save <file>'- Save the current game.\n6) 'resign' \t- Resign from your opponent.\n7) 'draw' \t- Request a draw with your opponent.\n8) 'quit' \t- Quit the game.\nEnter a command: ";
+    cout << "1) 'symbols' \t- Switch between symbol and characters on the board.\n2) 'e2e3' \t- To enter a move.\n3. 'history' \t- Show the game's move history.\n4) 'stats' \t- Show the game's statistics.\n5) 'undo' \t- Undo a move.\n6) 'save <file>'- Save the current game.\n7) 'resign' \t- Resign from your opponent.\n8) 'draw' \t- Request a draw with your opponent.\n9) 'quit' \t- Quit the game.\nEnter a command: ";
     string input;
     cin >> input;
     if (input == "quit" || input == "exit")
