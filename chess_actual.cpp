@@ -506,11 +506,6 @@ bool loadGame(const string& filename)
 
 bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
 {
-    if(turn % 2 == 0)
-        cout << "It is White's turn.\n";
-    else
-        cout << "It is Blacks's turn.\n";
-
     cout << "1) 'symbols' \t- Switch between symbol and characters on the board.\n2) 'e2e3' \t- To enter a move.\n3. 'history' \t- Show the game's move history.\n4) 'stats' \t- Show the game's statistics.\n5) 'undo' \t- Undo a move.\n6) 'save <file>'- Save the current game.\n7) 'resign' \t- Resign from your opponent.\n8) 'draw' \t- Request a draw with your opponent.\n9) 'quit' \t- Quit the game.\nEnter a command: ";
     string input;
     cin >> input;
