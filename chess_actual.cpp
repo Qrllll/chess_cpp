@@ -289,13 +289,13 @@ string moveToNotation(const Move& m) // generates the formal chess notation such
 
 void displayHistory()//display the move history eg '1. f3 e5 2. g4 Qh4#' for a simple game.
 {
+    cout << "\n----- Move History -----\n";
+
     if (moveCount == 0) 
     {
         cout << "No moves played yet.\n"; 
         return; 
     }
-
-    cout << "\n----- Move History -----\n";
 
     for (int i = 0; i < moveCount; i++)
     {
@@ -573,11 +573,16 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
             if(askYesNo("Does Black accept the draw?"))
             {
                 gameResult = GameResult::DRAW_AGREED;
+                printBoard();
                 cout << "Draw agreed.\n";
+                displayHistory();
+                displayStatistics();
+                return false;
             }
             else
             {
-                cout << "Draw declined.\n";
+                printBoard();
+                cout << "Draw declined by Black.\n";
                 return readMove(fromrow, fromcol, torow, tocol);  
             }
         }
@@ -587,11 +592,16 @@ bool readMove(int& fromrow, int& fromcol, int& torow, int& tocol)
             if(askYesNo("Does White accept the draw?"))
                 {
                     gameResult = GameResult::DRAW_AGREED;
+                    printBoard();
                     cout << "Draw agreed.\n";
+                    displayHistory();
+                    displayStatistics();
+                    return false;
                 }
             else
             {
-                cout << "Draw declined.\n";
+                printBoard();
+                cout << "Draw declined by White.\n";
                 return readMove(fromrow, fromcol, torow, tocol);  
             }
         }
