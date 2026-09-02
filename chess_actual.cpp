@@ -1006,20 +1006,14 @@ bool isColorMove(const Piece& piece, int& turn) //checks whether the piece moved
         if (piece.color == Color::WHITE) //check whether the selected piece is white
             return true;
         else
-        {
-            cout << "It is white's turn.\n";
             return false;
-        }
     }
     else
     {
         if (piece.color == Color::BLACK) //check whether the selected piece is black
             return true;
         else
-        {
-            cout << "It is black's turn.\n";
             return false;
-        }
     }
 }
 
@@ -1183,8 +1177,17 @@ bool tryMakeMove(int fromrow, int fromcol, int torow, int tocol, PieceType force
         if (!isColorMove(frompiece, turn)) 
         {
             printBoard();
-            cout << "That is not your piece.";
-            return false;
+            if(turn % 2 == 0)
+            {    
+                cout << "That is not your piece. Only white pieces can be moved.\n";
+                return false;
+            }
+            else
+            {
+                cout << "That is not your piece. Only black pieces can be moved.\n";
+                return false;
+            }
+            
         }
  
     int oldMoveCount = moveCount; //stores the moveCount in case the the move that the player made still leaves the king in check, which the move will be undo'd
